@@ -1,0 +1,949 @@
+---
+swagger: "2.0"
+info:
+  description: APIs for NH5050
+  version: 1.0.0
+  title: NH5050
+  contact:
+    email: devs@pbsa.info
+host: 'localhost:3000'
+basePath: /api/v1
+tags:
+- name: admins
+  description: Secured Admin-only calls
+- name: developers
+  description: Operations available to regular developers
+- name: users
+  description: APIs for user creation, updation and details.
+- name: organization
+  description: APIs for organization creation, beneficiary creation, updation and details.
+- name: raffle
+  description: APIs for raffle creation, raffle listing, ticket purchase, ticket sales details and transactions
+schemes:
+- https
+- http
+paths:
+  /users:
+    get:
+      tags:
+      - developers
+      - users
+      summary: searches for users
+      description: By passing in the mobile and email, you can search for a particular user
+      operationId: searchUsers
+      produces:
+      - application/json
+      parameters:
+      - name: mobile
+        in: query
+        description: pass the mobile number of the user to search for
+        required: true
+        type: string
+      - name: email
+        in: query
+        description: pass the email id of the user to search for
+        required: true
+        type: string
+        format: email
+      responses:
+        "200":
+          description: search results matching criteria
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/UsersPublic'
+        "400":
+          description: bad input parameter
+    post:
+      tags:
+      - developers
+      - users
+      summary: adds a new user or updates existing
+      description: Adds or updates a user in the database
+      operationId: addUser
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: user
+        description: User to add or update
+        required: false
+        schema:
+          $ref: '#/definitions/User'
+      responses:
+        "200":
+          description: user updated
+          schema:
+            $ref: '#/definitions/UserPublic'
+        "201":
+          description: user created
+          schema:
+            $ref: '#/definitions/UserPublic'
+        "400":
+          description: invalid input, object invalid
+  /users/{id}:
+    get:
+      tags:
+      - developers
+      - users
+      summary: get user details
+      description: By passing in the id, you can get details for a particular user
+      operationId: getUserById
+      produces:
+      - application/json
+      parameters:
+      - name: id
+        in: path
+        description: pass the id of the user
+        required: true
+        type: string
+      responses:
+        "200":
+          description: user details for the matching id
+          schema:
+            $ref: '#/definitions/UserPublic'
+        "400":
+          description: bad input parameter
+  /raffles:
+    get:
+      tags:
+      - developers
+      - raffles
+      summary: get all raffles for organization
+      description: Get all raffles for the organization id passed as parameter
+      operationId: getAllRaffles
+      produces:
+      - application/json
+      parameters:
+      - name: organization_id
+        in: query
+        description: pass the id of the organization
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: raffles for the organization
+          schema:
+            $ref: '#/definitions/RafflesPublic'
+        "400":
+          description: bad input parameter
+    post:
+      tags:
+      - developers
+      - raffles
+      summary: creates a new raffle
+      description: Creates a new lottery in the blockchain
+      operationId: addRaffle
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: raffle
+        description: Raffle to create
+        required: false
+        schema:
+          $ref: '#/definitions/Raffle'
+      responses:
+        "201":
+          description: raffle created
+          schema:
+            $ref: '#/definitions/RafflePublic'
+        "400":
+          description: invalid input, object invalid
+  /raffles/{raffleId}:
+    get:
+      tags:
+      - developers
+      - raffles
+      summary: get raffle details
+      description: Get details of the raffle whose raffle id matches the id passed in path
+      operationId: getRaffleById
+      produces:
+      - application/json
+      parameters:
+      - name: raffleId
+        in: path
+        description: pass the id of the raffle
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: raffle details
+          schema:
+            $ref: '#/definitions/RafflePublic'
+        "400":
+          description: bad input parameter
+  /raffles/ticketpurchase:
+    post:
+      tags:
+      - developers
+      - raffles
+      summary: purchase a ticket for the raffle
+      description: Buy a ticket for the raffle
+      operationId: ticketPurchase
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: raffle
+        description: ticket sale object with details of ticket to be purchased
+        required: false
+        schema:
+          $ref: '#/definitions/TicketSale'
+      responses:
+        "200":
+          description: ticket purchased
+          schema:
+            $ref: '#/definitions/EntriesPublic'
+        "400":
+          description: invalid input, object invalid
+  /raffles/ticketsales/{raffleId}:
+    get:
+      tags:
+      - developers
+      - raffles
+      summary: get all tickets sold for a raffle
+      description: get all tickets sold for the raffle with given id
+      operationId: getTicketSales
+      produces:
+      - application/json
+      parameters:
+      - name: raffleId
+        in: path
+        description: pass the id of the raffle
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: all ticket sales
+          schema:
+            $ref: '#/definitions/TicketSalesPublic'
+        "400":
+          description: bad input parameter
+  /raffles/ticketdetails/{ticketId}:
+    get:
+      tags:
+      - developers
+      - raffles
+      summary: get ticket detail with entries
+      description: get ticket detail with entries for the ticket with given id
+      operationId: getTicketSaleDetails
+      produces:
+      - application/json
+      parameters:
+      - name: ticketId
+        in: path
+        description: pass the id of the ticket
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: ticket details
+          schema:
+            $ref: '#/definitions/EntriesPublic'
+        "400":
+          description: bad input parameter
+  /raffles/transactions/{raffleId}:
+    get:
+      tags:
+      - developers
+      - raffles
+      summary: get all transactions for a raffle
+      description: get all the transactions for the given raffle id
+      operationId: getAllTransactions
+      produces:
+      - application/json
+      parameters:
+      - name: raffleId
+        in: path
+        description: pass the id of the raffle
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: transactions for the raffle
+          schema:
+            $ref: '#/definitions/Transactions'
+        "400":
+          description: bad input parameter
+  /raffles/ticketbundles:
+    get:
+      tags:
+      - developers
+      - raffles
+      summary: get ticket bundles
+      description: get all ticket bundles from database
+      operationId: getTicketBundles
+      produces:
+      - application/json
+      parameters: []
+      responses:
+        "200":
+          description: ticket bundles
+          schema:
+            $ref: '#/definitions/Bundles'
+        "400":
+          description: bad input parameter
+  /organization:
+    get:
+      tags:
+      - developers
+      - organization
+      summary: get organization details
+      description: get organization details for the given organization id
+      operationId: getOrganization
+      produces:
+      - application/json
+      parameters:
+      - name: organizationId
+        in: query
+        description: pass the id of the organization
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: organization details
+          schema:
+            $ref: '#/definitions/Organization'
+        "400":
+          description: bad input parameter
+    post:
+      tags:
+      - admin
+      - organization
+      summary: create or update an organization (department, detachment)
+      description: Adds or updates an organization in the database (Admin only)
+      operationId: addUpdateOrganization
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: organization
+        description: Organization to add or update
+        required: false
+        schema:
+          $ref: '#/definitions/Organization'
+      responses:
+        "200":
+          description: orgaization updated
+          schema:
+            $ref: '#/definitions/Organization'
+        "201":
+          description: organization created
+          schema:
+            $ref: '#/definitions/Organization'
+        "400":
+          description: invalid input, object invalid
+  /organization/seller:
+    get:
+      tags:
+      - admin
+      - organization
+      summary: get sellers for organization
+      description: get sellers as per organization id
+      operationId: getSellers
+      produces:
+      - application/json
+      parameters:
+      - name: organizationId
+        in: query
+        description: pass the id of the organization
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Sellers for organization
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/UsersPublic'
+        "400":
+          description: bad input parameter
+    post:
+      tags:
+      - admin
+      - organization
+      summary: adds a new seller or updates existing
+      description: Adds or updates a user with user_type seller in the database
+      operationId: addSeller
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: seller
+        description: Seller user to add or update
+        required: false
+        schema:
+          $ref: '#/definitions/User'
+      responses:
+        "200":
+          description: seller updated
+          schema:
+            $ref: '#/definitions/UserPublic'
+        "201":
+          description: seller created
+          schema:
+            $ref: '#/definitions/UserPublic'
+        "400":
+          description: invalid input, object invalid
+  /organization/beneficiary:
+    get:
+      tags:
+      - admin
+      - organization
+      summary: get beneficiaries for organization
+      description: get beneficiaries as per organization id
+      operationId: getBeneficiaries
+      produces:
+      - application/json
+      parameters:
+      - name: organizationId
+        in: query
+        description: pass the id of the organization
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Beneficiaries for organization
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/BeneficiariesPublic'
+        "400":
+          description: bad input parameter
+    post:
+      tags:
+      - admin
+      - organization
+      summary: adds a new beneficiary or updates existing
+      description: Adds or updates an organization of type detachment
+      operationId: addBeneficiary
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: beneficiary
+        description: Beneficiary organization to add or update
+        required: false
+        schema:
+          $ref: '#/definitions/Organization'
+      responses:
+        "200":
+          description: beneficiary updated
+          schema:
+            $ref: '#/definitions/BeneficiaryPublic'
+        "201":
+          description: beneficiary created
+          schema:
+            $ref: '#/definitions/BeneficiaryPublic'
+        "400":
+          description: invalid input, object invalid
+  /organization/admins:
+    get:
+      tags:
+      - admin
+      - organization
+      summary: get admin users for organization
+      description: get admin users as per organization id
+      operationId: getAdminUsers
+      produces:
+      - application/json
+      parameters:
+      - name: organizationId
+        in: query
+        description: pass the id of the organization
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Admin users for organization
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/UsersPublic'
+        "400":
+          description: bad input parameter
+    post:
+      tags:
+      - admin
+      - organization
+      summary: adds a new admin or updates existing
+      description: Adds or updates a user with user_type admin in the database
+      operationId: addAdmin
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: user
+        description: Admin user to add or update
+        required: false
+        schema:
+          $ref: '#/definitions/User'
+      responses:
+        "200":
+          description: user updated
+          schema:
+            $ref: '#/definitions/UserPublic'
+        "201":
+          description: user created
+          schema:
+            $ref: '#/definitions/UserPublic'
+        "400":
+          description: invalid input, object invalid
+    delete:
+      tags:
+      - admin
+      - organization
+      summary: delete admin user for organization
+      description: delete admin user from the database for the provided user id
+      operationId: deleteAdminUser
+      produces:
+      - application/json
+      parameters:
+      - name: userId
+        in: query
+        description: pass the id of the user to be deleted
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: Deleted admin user for organization
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/UserPublic'
+        "400":
+          description: bad input parameter
+definitions:
+  User:
+    type: object
+    required:
+    - email
+    - firstname
+    - is_email_allowed
+    - mobile
+    - organization_id
+    - user_type
+    properties:
+      username:
+        type: string
+        example: prabhjot10
+      password:
+        type: string
+        format: password
+        example: p@ssw0rd9999
+        minLength: 6
+        maxLength: 30
+        pattern: ^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$
+      firstname:
+        type: string
+        example: Prabhjot
+      lastname:
+        type: string
+        example: Singh
+      email:
+        type: string
+        format: email
+        example: p.singh@gmail.com
+      mobile:
+        type: string
+        example: +1 (999) 999-9999
+      is_email_allowed:
+        type: boolean
+      user_type:
+        type: string
+        enum:
+        - player
+        - seller
+        - admin
+      organization_id:
+        type: integer
+        example: 1
+  UserPublic:
+    type: object
+    required:
+    - email
+    - firstname
+    - id
+    - is_email_allowed
+    - lastname
+    - mobile
+    - organization_id
+    - status
+    - username
+    properties:
+      id:
+        type: integer
+        example: 1
+      username:
+        type: string
+        example: prabhjot10
+      firstname:
+        type: string
+        example: Prabhjot
+      lastname:
+        type: string
+        example: Singh
+      email:
+        type: string
+        format: email
+        example: p.singh@gmail.com
+      mobile:
+        type: string
+        example: +1 (999) 999-9999
+      is_email_allowed:
+        type: boolean
+      status:
+        type: string
+        enum:
+        - active
+        - inactive
+      organization_id:
+        type: integer
+        example: 1
+  UsersPublic:
+    type: array
+    items:
+      $ref: '#/definitions/UserPublic'
+  Raffle:
+    type: object
+    required:
+    - admin_fees_percent
+    - department_percent
+    - donation_percent
+    - draw_datetime
+    - end_datetime
+    - image_url
+    - is_progressive
+    - organization_id
+    - progressive_draw_percent
+    - raffle_description
+    - raffle_draw_percent
+    - raffle_name
+    - start_datetime
+    properties:
+      raffle_name:
+        type: string
+        example: Progressive 50/50
+      raffle_description:
+        type: string
+        example: Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+      organization_id:
+        type: integer
+        example: 1
+      start_datetime:
+        type: string
+        format: date-time
+      end_datetime:
+        type: string
+        format: date-time
+      draw_datetime:
+        type: string
+        format: date-time
+      is_progressive:
+        type: boolean
+      progressive_draw_id:
+        type: integer
+        example: 1
+      admin_fees_percent:
+        type: number
+        format: double
+        example: 13.0
+      donation_percent:
+        type: number
+        format: double
+        example: 5.0
+      raffle_draw_percent:
+        type: number
+        format: double
+        example: 20.5
+      progressive_draw_percent:
+        type: number
+        format: double
+        example: 20.5
+      detachement_percent:
+        type: number
+        format: double
+        example: 36.9
+      department_percent:
+        type: number
+        format: double
+        example: 4.1
+      image_url:
+        type: string
+        format: url
+  RafflePublic:
+    type: object
+    properties:
+      id:
+        type: integer
+        example: 1
+      raffle_name:
+        type: string
+        example: Progressive 50/50
+      raffle_description:
+        type: string
+        example: Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+      organization_id:
+        type: integer
+        example: 1
+      start_datetime:
+        type: string
+        format: date-time
+      end_datetime:
+        type: string
+        format: date-time
+      draw_datetime:
+        type: string
+        format: date-time
+      is_progressive:
+        type: boolean
+      progressive_draw_id:
+        type: integer
+        example: 1
+      admin_fees_percent:
+        type: number
+        format: double
+        example: 13.0
+      donation_percent:
+        type: number
+        format: double
+        example: 5.0
+      raffle_draw_percent:
+        type: number
+        format: double
+        example: 20.5
+      progressive_draw_percent:
+        type: number
+        format: double
+        example: 20.5
+      detachement_percent:
+        type: number
+        format: double
+        example: 36.9
+      department_percent:
+        type: number
+        format: double
+        example: 4.1
+      winner:
+        $ref: '#/definitions/UserPublic'
+      image_url:
+        type: string
+        format: url
+  RafflesPublic:
+    type: array
+    items:
+      $ref: '#/definitions/RafflePublic'
+  Bundle:
+    type: object
+    required:
+    - price
+    - quantity
+    properties:
+      id:
+        type: integer
+        example: 1
+      quantity:
+        type: integer
+        example: 10
+      price:
+        type: number
+        format: double
+        example: 30.0
+        multipleOf: 0.01
+  Bundles:
+    type: array
+    items:
+      $ref: '#/definitions/Bundle'
+  Organization:
+    type: object
+    required:
+    - logo_url
+    - name
+    - time_format
+    - type
+    properties:
+      id:
+        type: integer
+        example: 3
+      non_profit_id:
+        type: string
+        example: 12412-123412178
+      name:
+        type: string
+        example: Sea Corps
+      type:
+        type: string
+        enum:
+        - department
+        - detachment
+      address_line1:
+        type: string
+        example: 47 Lockheed Crescent
+      address_line2:
+        type: string
+        example: Debert Industrial Area
+      city:
+        type: string
+        example: Debert
+      state:
+        type: string
+        example: NS
+      country:
+        type: string
+        example: Canada
+      zip:
+        type: string
+        example: B0M 1G0
+      stripe_account_id:
+        type: string
+        example: "123897"
+      time_format:
+        type: string
+        enum:
+        - 12h
+        - 24h
+      logo_url:
+        type: string
+        format: url
+        example: https://abc.com/pics/logo
+  TicketSale:
+    type: object
+    required:
+    - detachment_id
+    - payment_type
+    - raffle_id
+    - ticket_bundle_id
+    - total_price
+    properties:
+      raffle_id:
+        type: integer
+        example: 1
+      ticket_bundle_id:
+        type: integer
+        example: 2
+      total_price:
+        type: number
+        format: double
+        example: 30.0
+        multipleOf: 0.01
+      detachment_id:
+        type: integer
+        example: 3
+      seller_id:
+        type: integer
+        example: 23
+      payment_type:
+        type: string
+        enum:
+        - cash
+        - stripe
+      stripe_payment_id:
+        type: string
+        example: P5AS2AS145235
+  TicketSalePublic:
+    type: object
+    properties:
+      id:
+        type: integer
+      raffle_id:
+        type: integer
+      player:
+        $ref: '#/definitions/UserPublic'
+      ticket_bundle:
+        $ref: '#/definitions/Bundle'
+      total_price:
+        type: number
+        format: double
+        example: 30.0
+        multipleOf: 0.01
+      detachment:
+        $ref: '#/definitions/BeneficiaryPublic'
+      seller:
+        $ref: '#/definitions/UserPublic'
+      payment_type:
+        type: string
+        enum:
+        - cash
+        - stripe
+      stripe_payment_id:
+        type: string
+  TicketSalesPublic:
+    type: array
+    items:
+      $ref: '#/definitions/TicketSalePublic'
+  BeneficiaryPublic:
+    type: object
+    properties:
+      id:
+        type: integer
+        example: 2
+      detachment:
+        $ref: '#/definitions/Organization'
+      organization_id:
+        type: integer
+  BeneficiariesPublic:
+    type: array
+    items:
+      $ref: '#/definitions/BeneficiaryPublic'
+  EntriesPublic:
+    type: object
+    properties:
+      entries:
+        type: array
+        example:
+        - id: 5
+        - id: 8
+        items:
+          $ref: '#/definitions/EntriesPublic_entries'
+      ticket_sales:
+        $ref: '#/definitions/TicketSalePublic'
+  Transaction:
+    type: object
+    properties:
+      id:
+        type: integer
+        example: 1
+      transfer_from:
+        $ref: '#/definitions/User'
+      transfer_to:
+        $ref: '#/definitions/User'
+      raffle_id:
+        type: integer
+        example: 2
+      amount:
+        type: number
+        format: double
+        example: 30.0
+        multipleOf: 0.01
+      transaction_type:
+        type: string
+        enum:
+        - cashBuy
+        - stripeBuy
+        - ticketPurchase
+        - winnings
+        - donations
+  Transactions:
+    type: array
+    items:
+      $ref: '#/definitions/Transaction'
+  EntriesPublic_entries:
+    type: object
+    properties:
+      id:
+        type: integer
