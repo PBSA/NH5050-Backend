@@ -7,18 +7,24 @@
     "doc": "docs"
   },
   "dependencies": {
-    "inquirer": "^7.1.0"
+    "inquirer": "^7.1.0",
+    "config": "^3.3.0",
+    "pg": "^7.18.2",
+    "pg-hstore": "^2.3.3",
+    "sequelize": "^5.21.5"
   },
   "devDependencies": {
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.8.7",
-    "@babel/preset-env": "^7.8.7"
+    "@babel/preset-env": "^7.8.7",
+    "sequelize-cli": "^5.5.1"
   },
   "scripts": {
     "sonar": "node scripts/sonar.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "./node_modules/.bin/babel src -d dist",
-    "start": "npm run build && node dist/index.js"
+    "start": "npm run build && node dist/index.js",
+    "sequelize": "./node_modules/.bin/sequelize"
   },
   "repository": {
     "type": "git",
