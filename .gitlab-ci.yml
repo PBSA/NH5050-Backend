@@ -1,0 +1,26 @@
+stages:
+  - build
+  - deploy
+
+build:
+  image: node:12 
+  stage: build
+  script:
+    - npm install
+  cache:
+    paths:
+      - node_modules
+  artifacts:
+    paths:
+      - *.*
+  tags:
+    - docker
+  
+deployToDev:
+  stage: deploy
+  script:
+    - deployBackend
+  only:
+    - develop
+  tags:
+    - 5050dev
