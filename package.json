@@ -6,13 +6,16 @@
   "directories": {
     "doc": "docs"
   },
-  "dependencies": {},
+  "dependencies": {
+    "inquirer": "^7.1.0"
+  },
   "devDependencies": {
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.8.7",
     "@babel/preset-env": "^7.8.7"
   },
   "scripts": {
+    "sonar": "node scripts/sonar.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "./node_modules/.bin/babel src -d dist",
     "start": "npm run build && node dist/index.js"
