@@ -49,9 +49,7 @@ class Server {
 
       if (config.cors) {
         const corsOptions = {
-          origin: (origin, callback) => {
-            callback(null, true);
-          },
+          origin: config.frontendUrl,
           credentials: true,
           methods: ['GET', 'PUT', 'POST', 'OPTIONS', 'DELETE', 'PATCH'],
           headers: ['x-user', 'X-Signature', 'accept', 'content-type']

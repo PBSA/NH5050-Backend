@@ -14,5 +14,6 @@
   },
   "sessionSecret": "sessionSecret",
   "cors": false,
-  "port": 3000
+  "port": 3000,
+  "frontendUrl": "http://localhost:8082"
 }
