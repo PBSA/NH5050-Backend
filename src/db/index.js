@@ -16,6 +16,8 @@ const sequelize = new Sequelize(database, username, password, {
   dialect: 'postgres'
 });
 
+var db = {};
+
 fs
   .readdirSync(path.join(__dirname, 'models'))
   .filter(file => {

@@ -5,5 +5,14 @@
     "host": "localhost",
     "port": "5432",
     "database": "nh5050"
-  }
+  },
+  "swagger": {
+    "host": "virtserver.swaggerhub.com",
+    "schemes": [
+      "https"
+    ]
+  },
+  "sessionSecret": "sessionSecret",
+  "cors": false,
+  "port": 3000
 }

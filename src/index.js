@@ -1,3 +1,13 @@
-import './db'
+//import './db'
+import server from './server.js';
 
-console.log('hello world');
+(async () => {
+
+  try {
+    await new server().init();
+  } catch (err) {
+    console.log(err);
+  } finally {
+    console.log('server has been started');
+  }
+})();
