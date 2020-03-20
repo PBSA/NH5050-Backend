@@ -19,7 +19,7 @@ build:
 deployToDev:
   stage: deploy
   script:
-    - mv ../NH5050-backend $PROJECT_DIR
+    - cp -R ../NH5050-backend $PROJECT_DIR
     - deployBackend
   only:
     - develop
