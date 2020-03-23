@@ -67,7 +67,9 @@ class UserService {
       organization_id: newUser.organization_id
     });
 
-    await this.mailService.sendMailAfterRegistration(firstname, email);
+    if(newUser.is_email_allowed) {
+      await this.mailService.sendMailAfterRegistration(firstname, email);
+    }
 
     await this.peerplaysRepository.createPeerplaysAccount(peerplaysAccountUsername,ownerKey, activeKey);
     User.peerplays_account_name = peerplaysAccountUsername;
