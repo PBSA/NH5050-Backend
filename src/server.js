@@ -8,7 +8,10 @@ const swaggerJSDoc = require('swagger-jsdoc');
 let swaggerDef = require('./swagger-definition.js');
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
 const config = require('config');
-const dbConnection = require('./db');
+const db = require('./db');
+const usersController = require('./controllers/users.controller');
+const RestError = require('./errors/rest.error');
+const MethodNotAllowedError = require('./errors/method-not-allowed.error');
 
 /**
  * @swagger
@@ -36,9 +39,12 @@ const dbConnection = require('./db');
  * @class Server
  */
 class Server {
-  constructor() {
+  constructor(conns) {
+    this.conns = conns;
     this.app = null;
     this.server = null;
+    this.peerplaysConnection = conns.peerplaysConnection;
+    this.usersController = new usersController(conns);
   }
 
   init() {
@@ -60,7 +66,7 @@ class Server {
       }
 
       const SessionStore = new SequelizeStore({
-        db: dbConnection.sequelize,
+        db: db.sequelize,
         modelKey: 'Sessions'
       });
 
@@ -86,8 +92,66 @@ class Server {
 
       this.server = this.app.listen(config.port, () => {
         console.log(`API APP REST listen ${config.port} Port`);
+        this._initRestRoutes();
         resolve();
       });
+    });
+  }
+
+  /**
+   * Bind routers
+   */
+  _initRestRoutes() {
+    [
+      this.usersController
+    ].forEach((controller) => controller.getRoutes(this.app).forEach((route) => {
+      this.addRestHandler(...route);
+    }));
+
+    this.addRestHandler('use', '*', () => {
+      throw new MethodNotAllowedError();
+    });
+  }
+
+  /** @typedef {('get','post','patch','use')} Method */
+
+  /**
+   * @param {Method} method
+   * @param {String} route
+   * @param args
+   */
+  addRestHandler(method, route, ...args) {
+    const action = args.pop();
+    this.app[method](route, async (req, res) => {
+      try {
+        await args.reduce(async (previousPromise, handler) => {
+          await previousPromise;
+          return handler()(req, res);
+        }, Promise.resolve());
+
+        const result = await action(req.user, req.pure, req, res);
+        return res.status(200).json({
+          result: result || null,
+          status: 200
+        });
+      } catch (error) {
+        let restError = error;
+
+        if (!(error instanceof RestError)) {
+          /* istanbul ignore next */
+          console.error(error);
+          /* istanbul ignore next */
+          restError = {
+            status: 500,
+            message: 'server side error'
+          };
+        }
+
+        return res.status(restError.status).json({
+          error: restError.details || restError.message,
+          status: restError.status
+        });
+      }
     });
   }
 
