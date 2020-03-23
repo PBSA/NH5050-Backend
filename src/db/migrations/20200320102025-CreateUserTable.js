@@ -1,5 +1,3 @@
-'use strict';
-
 const MigrationUtil = require('../../utils/migtation.util');
 const DataTypes = require('sequelize/lib/data-types');
 
