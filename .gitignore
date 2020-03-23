@@ -1,4 +1,6 @@
 node_modules/
 dist/
 
-sonar-scanner/.DS_Store
+*/.DS_Store
+
+.DS_Store

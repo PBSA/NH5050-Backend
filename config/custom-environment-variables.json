@@ -7,5 +7,20 @@
     "database": "DB_DATABASE"
   },
   "sessionSecret": "SESSION_SECRET",
-  "frontendUrl": "FRONTEND_URL"
+  "frontendUrl": "FRONTEND_URL",
+  "peerplays": {
+    "sendAssetId": "PEERPLAYS_SEND_ASSET_ID",
+    "paymentAccountID": "PEERPLAYS_PAYMENT_ACCOUNT_ID",
+    "paymentAccountWIF": "PEERPLAYS_PAYMENT_ACCOUNT_WIF",
+    "paymentReceiver": "PEERPLAYS_PAYMENT_RECEIVER",
+    "peerplaysWS": "PEERPLAYS_WS"
+  },
+  "mailer": {
+    "host": "MAILER_HOST",
+    "sender": "MAILER_SENDER",
+    "auth": {
+      "user": "MAILER_AUTH_USER",
+      "pass": "MAILER_AUTH_PASS"
+    }
+  }
 }
