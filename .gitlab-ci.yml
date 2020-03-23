@@ -32,5 +32,5 @@ deployToStaging:
     - cp -R ../NH5050-backend $PROJECT_DIR
     - deployBackend
   tags:
-    - 5050dev
+    - 5050stage
   when: manual
