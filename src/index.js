@@ -10,7 +10,8 @@ var conns = {};
     conns.peerplaysConnection = new PeerplaysConnection();
     conns.smtpConnection = new SmtpConnection();
 
-    Object.values(conns).forEach((connection) => connection.connect());
+    await conns.peerplaysConnection.connect();
+    await conns.smtpConnection.connect();
 
     await new server(conns).init();
   } catch (err) {
