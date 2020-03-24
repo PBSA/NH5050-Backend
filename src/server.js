@@ -9,9 +9,11 @@ let swaggerDef = require('./swagger-definition.js');
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
 const config = require('config');
 const db = require('./db');
-const usersController = require('./controllers/users.controller');
 const RestError = require('./errors/rest.error');
 const MethodNotAllowedError = require('./errors/method-not-allowed.error');
+
+const UsersController = require('./controllers/users.controller');
+const OrganizationsController = require('./controllers/organizations.controller');
 
 /**
  * @swagger
@@ -44,7 +46,8 @@ class Server {
     this.app = null;
     this.server = null;
     this.peerplaysConnection = conns.peerplaysConnection;
-    this.usersController = new usersController(conns);
+    this.usersController = new UsersController(conns);
+    this.organizationsController = new OrganizationsController(conns);
   }
 
   init() {
@@ -103,7 +106,8 @@ class Server {
    */
   _initRestRoutes() {
     [
-      this.usersController
+      this.usersController,
+      this.organizationsController,
     ].forEach((controller) => controller.getRoutes(this.app).forEach((route) => {
       this.addRestHandler(...route);
     }));
