@@ -21,6 +21,14 @@ class OrganizationService {
     return org.getPublic();
   }
 
+  async createOrUpdateOrganization(organizationData) {
+    const organization = await this.repository.model.upsert({
+      ...organizationData
+    })
+
+    return organization.getPublic();
+  }
+
 }
 
 module.exports = OrganizationService;
