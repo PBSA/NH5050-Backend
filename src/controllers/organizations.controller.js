@@ -1,11 +1,13 @@
 import RestError from '../errors/rest.error';
 import OrganizationService from '../services/organization.service';
+import AuthValidator from '../validators/auth.validator';
 import OrganizationValidator from '../validators/organization.validator';
 
 class OrganizationsController {
 
   constructor() {
     this.organizationService = new OrganizationService();
+    this.authValidator = new AuthValidator();
     this.organizationValidator = new OrganizationValidator();
   }
 
@@ -62,6 +64,45 @@ class OrganizationsController {
         'get', '/api/v1/organization',
         this.organizationValidator.getOrganization,
         this.getOrganization.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /organization:
+       *  post:
+       *    tags:
+       *    - admins
+       *    - organization
+       *    summary: create or update an organization
+       *    operationId: addOrganization
+       *    description: Creates or updates an organizatioon in the database
+       *    consumes:
+       *    - application/json
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: body
+       *      name: organization
+       *      description: Organization to add or update
+       *      schema:
+       *        $ref: '#/definitions/Organization'
+       *    responses:
+       *      200:
+       *        description: organization updated
+       *        schema:
+       *          $ref: '#/definitions/OrganizationPublic'
+       *      201:
+       *        description: organization created
+       *        schema:
+       *          $ref: '#/definitions/OrganizationPublic'
+       *      400:
+       *        description: invalid input, object invalid
+       */
+      [
+        'post', '/api/v1/organization',
+        this.authValidator.loggedAdminOnly,
+        this.organizationValidator.validateOrganization,
+        this.createOrUpdateOrganization.bind(this)
       ]
     ];
   }
@@ -76,6 +117,10 @@ class OrganizationsController {
         throw new RestError(e.message, 500);
       }
     }
+  }
+
+  createOrUpdateOrganization(organizationData) {
+    return this.organizationService.createOrUpdateOrganization(organizationData);
   }
 
 }
