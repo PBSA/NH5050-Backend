@@ -33,6 +33,7 @@
   "devDependencies": {
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.8.7",
+    "@babel/node": "^7.8.7",
     "@babel/preset-env": "^7.8.7",
     "sequelize-cli": "^5.5.1"
   },
@@ -40,7 +41,7 @@
     "sonar": "node scripts/sonar.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "./node_modules/.bin/babel src -d dist --copy-files",
-    "start": "npm run build && nodemon dist/index.js",
+    "start": "nodemon src/index.js --exec ./node_modules/.bin/babel-node --presets=@babel/preset-env",
     "sequelize": "./node_modules/.bin/sequelize",
     "db-migrate-all": "sequelize db:migrate",
     "db-migrate-undo": "sequelize db:migrate:undo",
