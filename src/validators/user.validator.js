@@ -1,4 +1,4 @@
-const Joi = require('./abstract/joi.form');
+const Joi = require('joi');
 const BaseValidator = require('./abstract/base.validator');
 
 class UserValidator extends BaseValidator {

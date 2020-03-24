@@ -1,4 +1,4 @@
-const Joi = require('./abstract/joi.form');
+const Joi = require('joi');
 const tldJS = require('tldjs');
 const BaseValidator = require('./abstract/base.validator');
 const ValidateError = require('../errors/validate.error');
