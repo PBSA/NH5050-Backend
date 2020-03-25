@@ -1,5 +1,6 @@
 
 import OrganizationRepository from '../repositories/organization.repository';
+import {organizationType} from '../constants/organization';
 
 class OrganizationService {
   
@@ -22,11 +23,12 @@ class OrganizationService {
   }
 
   async createOrUpdateOrganization(organizationData) {
+    organizationData.type = organizationType.organization;
     const organization = await this.repository.model.upsert({
       ...organizationData
-    })
+    },{ returning: true });
 
-    return organization.getPublic();
+    return organization[0].getPublic();
   }
 
 }

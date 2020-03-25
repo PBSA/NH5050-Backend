@@ -159,40 +159,37 @@ const attributes = {
     defaultValue: organizationConstants.organizationType.organization
   },
   address_line1: {
-    type: Sequelize.STRING,
-    allowNull: false
+    type: Sequelize.STRING
   },
   address_line2: {
     type: Sequelize.STRING,
     allowNull: true
   },
   city: {
-    type: Sequelize.STRING,
-    allowNull: false
+    type: Sequelize.STRING
   },
   state: {
-    type: Sequelize.STRING,
-    allowNull: false
+    type: Sequelize.STRING
   },
   country: {
     type: Sequelize.ENUM(Object.values(organizationConstants.country)),
     defaultValue: organizationConstants.country.us
   },
   zip: {
-    type: Sequelize.STRING,
-    allowNull: false
+    type: Sequelize.STRING
   },
   time_format: {
     type: Sequelize.ENUM(Object.values(organizationConstants.timeFormat)),
     defaultValue: organizationConstants.timeFormat.time12h
   },
+  stripe_account_id: {
+    type: Sequelize.STRING
+  },
   logo_url: {
-    type: Sequelize.STRING,
-    allowNull: false
+    type: Sequelize.STRING
   },
   website_url: {
-    type: Sequelize.STRING,
-    allowNull: false
+    type: Sequelize.STRING
   }
 };
 

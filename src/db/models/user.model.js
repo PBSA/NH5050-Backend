@@ -176,6 +176,10 @@ const attributes = {
   ip_address: {
     type:Sequelize.STRING,
     allowNull: true
+  },
+  organization_id: {
+    type: Sequelize.INTEGER,
+    allowNull: true
   }
 };
 
@@ -185,6 +189,9 @@ module.exports = {
       sequelize,
       modelName: 'users'
     });
+  },
+  associate(models) {
+    UserModel.belongsTo(models.Organization.model, {foreignKey : 'organization_id', targetKey: 'id'});
   },
   get model() {
     return UserModel;
