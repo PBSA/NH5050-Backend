@@ -3,7 +3,6 @@ const DataTypes = require('sequelize/lib/data-types');
 
 const fields = {
   ...MigrationUtil.genericRows(),
-  ...MigrationUtil.createForeignFields(['userId', 'paypalPayoutId', 'transactionId']),
   raffle_name: { type: DataTypes.STRING, allowNull: false },
   raffle_description: { type: DataTypes.STRING, allowNull: false },
   slug: { type: DataTypes.STRING, allowNull: false },
