@@ -15,6 +15,7 @@ const UserRepository = require('./repositories/user.repository');
 
 const UsersController = require('./controllers/users.controller');
 const OrganizationsController = require('./controllers/organizations.controller');
+const RafflesController = require('./controllers/raffles.controller');
 
 /**
  * @swagger
@@ -50,6 +51,7 @@ class Server {
     this.usersController = new UsersController(conns);
     this.organizationsController = new OrganizationsController(conns);
     this.userRepository = new UserRepository();
+    this.rafflesController = new RafflesController(conns);
   }
 
   init() {
@@ -120,6 +122,7 @@ class Server {
     [
       this.usersController,
       this.organizationsController,
+      this.rafflesController
     ].forEach((controller) => controller.getRoutes(this.app).forEach((route) => {
       this.addRestHandler(...route);
     }));

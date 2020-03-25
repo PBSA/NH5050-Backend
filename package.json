@@ -21,7 +21,7 @@
     "joi": "^14.3.1",
     "nodemailer": "^6.4.6",
     "passport": "^0.4.1",
-    "peerplaysjs-lib": "^0.6.4",
+    "peerplaysjs-lib": "peerplays-network/peerplaysjs-lib#5050-beatrice-merge",
     "pg": "^7.18.2",
     "pg-hstore": "^2.3.3",
     "request": "^2.88.2",
