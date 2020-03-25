@@ -35,5 +35,9 @@
       "pass": "***REMOVED***"
     },
     "sender": "Prabhjot Singh"
-  }
+  },
+  "s3": {
+    "bucket": "nh5050-dev"
+  },
+  "cdnUrl": "https://example.com/"
 }
