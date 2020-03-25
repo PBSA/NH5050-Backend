@@ -3,11 +3,6 @@ const BaseValidator = require('./abstract/base.validator');
 
 class UserValidator extends BaseValidator {
 
-  /**
-   * @param {AppConfig} opts.config
-   * @param {UserRepository} opts.userRepository
-   * @param {BanHistoryRepository} opts.banHistoryRepository
-   */
   constructor() {
     super();
 

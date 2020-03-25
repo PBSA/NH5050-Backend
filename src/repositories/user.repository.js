@@ -35,6 +35,12 @@ class UserRepository extends BasePostgresRepository {
     return number;
   }
 
+  async findByEmail(email) {
+    return this.model.findOne({
+      where: {email}
+    });
+  }
+
 }
 
 module.exports = UserRepository;

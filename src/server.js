@@ -11,6 +11,7 @@ const config = require('config');
 const db = require('./db');
 const RestError = require('./errors/rest.error');
 const MethodNotAllowedError = require('./errors/method-not-allowed.error');
+const UserRepository = require('./repositories/user.repository');
 
 const UsersController = require('./controllers/users.controller');
 const OrganizationsController = require('./controllers/organizations.controller');
@@ -48,6 +49,7 @@ class Server {
     this.peerplaysConnection = conns.peerplaysConnection;
     this.usersController = new UsersController(conns);
     this.organizationsController = new OrganizationsController(conns);
+    this.userRepository = new UserRepository();
   }
 
   init() {
@@ -85,6 +87,16 @@ class Server {
 
       this.app.use(passport.initialize());
       this.app.use(passport.session());
+
+      passport.serializeUser((user, done) => {
+        done(null, user.id);
+      });
+
+      passport.deserializeUser((user, done) => {
+        this.userRepository.findByPk(user).then((_user) => {
+          done(null, _user);
+        }).catch((e)=>console.log(e));
+      });
 
       if (process.env.NODE_ENV != 'production') {
         this.app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerJSDoc({

@@ -53,18 +53,23 @@ class UserService {
     const ownerKey = keys.pubKeys.owner;
     const activeKey = keys.pubKeys.active;
 
+    let hashedPassword;
+
+    if(password) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
     const User = await this.userRepository.model.create({
       email,
       mobile,
-      password,
+      password: hashedPassword,
       firstname,
       lastname,
       is_email_verified: false,
       is_email_allowed: newUser.is_email_allowed,
       user_type: profileConstants.userType.player,
       status: profileConstants.status.active,
-      ip_address: req.connection.remoteAddress,
-      organization_id: newUser.organization_id
+      ip_address: req.connection.remoteAddress
     });
 
     if(newUser.is_email_allowed) {
@@ -76,6 +81,20 @@ class UserService {
     User.peerplays_account_id = await this.peerplaysRepository.getAccountId(peerplaysAccountUsername);
     User.peerplays_master_password = peerplaysAccountPassword;
     await User.save();
+
+    return this.getCleanUser(User);
+  }
+
+  async getSignInUser(email, password) {
+    const User = await this.userRepository.findByEmail(email.toLowerCase());
+
+    if (!User) {
+      throw new Error('User not found');
+    }
+
+    if (!await bcrypt.compare(password, User.password)) {
+      throw new Error('Invalid password');
+    }
 
     return this.getCleanUser(User);
   }

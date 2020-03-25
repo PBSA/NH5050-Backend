@@ -7,36 +7,18 @@ const userService = require('../services/user.service');
  * @swagger
  *
  * definitions:
- *  UsersChangeNotificationsStatus:
+ *  AuthSignInUser:
  *    type: object
  *    required:
- *      - notifications
+ *      - email
+ *      - password
  *    properties:
- *      notifications:
- *        type: boolean
- *  UsersChangeInvitationsStatus:
- *    type: object
- *    required:
- *      - invitations
- *      - minBounty
- *    properties:
- *      invitations:
+ *      email:
  *        type: string
- *      users:
- *        type: array
- *        items:
- *          type: integer
- *      games:
- *        type: array
- *        description: Names of games from which user can accepts invitations
- *        items:
- *          type: string
- *      minBounty:
- *        type: number
- *        description: Minimum bounty allowed for invitations
- *
+ *      password:
+ *        type: string
+ *        format: password
  */
-
 class UsersController {
   constructor(conns) {
     this.userService = new userService(conns);
@@ -68,7 +50,7 @@ class UsersController {
        *      name: id
        *      description: pass the id of the user
        *      required: true
-       *      type: string
+       *      type: integer
        *    responses:
        *      200:
        *        description: user details for the matching id
@@ -95,8 +77,8 @@ class UsersController {
        */
       [
         'get', '/api/v1/users/:id',
-        this.userValidator.getUser,
         this.authValidator.loggedAdminOnly,
+        this.userValidator.getUser,
         this.getUser.bind(this)
       ],
       /**
@@ -159,9 +141,9 @@ class UsersController {
        *    tags:
        *    - developers
        *    - users
-       *    summary: adds a new user or updates existing
+       *    summary: adds a new user
        *    operationId: addUser
-       *    description: Adds or updates a user in the database
+       *    description: Adds a user in the database
        *    consumes:
        *    - application/json
        *    produces:
@@ -169,15 +151,11 @@ class UsersController {
        *    parameters:
        *    - in: body
        *      name: user
-       *      description: User to add or update
+       *      description: User to add
        *      schema:
        *        $ref: '#/definitions/User'
        *    responses:
        *      200:
-       *        description: user updated
-       *        schema:
-       *          $ref: '#/definitions/UserPublic'
-       *      201:
        *        description: user created
        *        schema:
        *          $ref: '#/definitions/UserPublic'
@@ -188,7 +166,39 @@ class UsersController {
         'post','/api/v1/users',
         this.authValidator.validatePlayerSignUp,
         this.playerSignup.bind(this)
-      ]
+      ],
+      /**
+       * @swagger
+       *
+       * /users/login:
+       *  post:
+       *    description: Login the user
+       *    consumes:
+       *    - application/json
+       *    produces:
+       *    - application/json
+       *    tags:
+       *    - developers
+       *    - users
+       *    parameters:
+       *      - name: login
+       *        in:  body
+       *        required: true
+       *        schema:
+       *          $ref: '#/definitions/AuthSignInUser'
+       *    responses:
+       *      200:
+       *        description: Sign in response
+       *        schema:
+       *          $ref: '#/definitions/UserPublic'
+       *      400:
+       *        description: Error form validation
+       *        schema:
+       *          $ref: '#/definitions/ValidateError'
+       */
+      ['post', '/api/v1/users/login',
+      this.authValidator.validateSignIn,
+      this.signIn.bind(this)],
     ];
   }
 
@@ -210,6 +220,19 @@ class UsersController {
 
   async playerSignup(user, data, req) {
     return await this.userService.signUp(req, data);
+  }
+
+  async signIn(_, {email, password}, req) {
+    let user;
+
+    try {
+      user = await this.userService.getSignInUser(email, password);
+    } catch (e) {
+      throw new ValidateError(400, 'Invalid email/username or password');
+    }
+
+    await new Promise((success) => req.login(user, () => success()));
+    return user;
   }
 
 }
