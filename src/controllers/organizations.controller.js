@@ -107,7 +107,7 @@ class OrganizationsController {
     ];
   }
 
-  async getOrganization(id) {
+  async getOrganization(user, id) {
     try {
       return await this.organizationService.getOrganization(id);
     } catch (e) {
@@ -119,7 +119,7 @@ class OrganizationsController {
     }
   }
 
-  createOrUpdateOrganization(organizationData) {
+  createOrUpdateOrganization(user, organizationData) {
     return this.organizationService.createOrUpdateOrganization(organizationData);
   }
 

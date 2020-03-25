@@ -6,16 +6,16 @@ const fields = {
   name: {type: DataTypes.STRING, allowNull: false},
   non_profit_id: {type: DataTypes.STRING, allowNull: true},
   type: {type: DataTypes.ENUM(['organization', 'beneficiary']), defaultValue: 'organization'},
-  address_line1: {type: DataTypes.STRING, allowNull: false},
-  address_line2: {type: DataTypes.STRING, allowNull: true},
-  city: {type: DataTypes.STRING, allowNull: false},
-  state: {type: DataTypes.STRING, allowNull: false},
+  address_line1: {type: DataTypes.STRING},
+  address_line2: {type: DataTypes.STRING},
+  city: {type: DataTypes.STRING},
+  state: {type: DataTypes.STRING},
   country: {type: DataTypes.ENUM(['us']), defaultValue: 'us'},
-  zip: {type: DataTypes.STRING, allowNull: false},
+  zip: {type: DataTypes.STRING},
   stripe_account_id: {type: DataTypes.STRING, allowNull: true},
   time_format: {type: DataTypes.ENUM(['12h', '24h']), defaultValue: '12h'},
-  logo_url: {type: DataTypes.STRING, allowNull: false},
-  website_url: {type: DataTypes.STRING, allowNull: false}
+  logo_url: {type: DataTypes.STRING},
+  website_url: {type: DataTypes.STRING}
 };
 
 module.exports = {

@@ -2,7 +2,7 @@ const Joi = require('joi');
 const BaseValidator = require('./abstract/base.validator');
 const ValidateError = require('../errors/validate.error');
 const organizationConstants = require('./../constants/organization');
-const usStates = require('./data/us.states');
+const usStates = require('./data/us.states').default;
 
 class OrganizationValidator extends BaseValidator {
 
@@ -10,6 +10,7 @@ class OrganizationValidator extends BaseValidator {
     super();
 
     this.getOrganization = this.getOrganization.bind(this);
+    this.validateOrganization = this.validateOrganization.bind(this);
   }
 
   getOrganization() {
@@ -25,7 +26,7 @@ class OrganizationValidator extends BaseValidator {
       id: Joi.number().integer(),
       non_profit_id: Joi.string(),
       name: Joi.string().required(),
-      type: Joi.string().valid(Object.values(organizationConstants.organizationType)).required(),
+      type: Joi.string().valid(Object.values(organizationConstants.organizationType)),
       address_line1: Joi.string().required(),
       address_line2: Joi.string(),
       city: Joi.string().required(),
