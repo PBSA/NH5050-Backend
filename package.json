@@ -24,7 +24,7 @@
     "multer-s3": "^2.9.0",
     "nodemailer": "^6.4.6",
     "passport": "^0.4.1",
-    "peerplaysjs-lib": "^0.6.4",
+    "peerplaysjs-lib": "peerplays-network/peerplaysjs-lib#5050-beatrice-merge",
     "pg": "^7.18.2",
     "pg-hstore": "^2.3.3",
     "randomstring": "^1.1.5",

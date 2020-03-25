@@ -17,14 +17,17 @@
   "port": 3000,
   "frontendUrl": "http://localhost:8082",
   "peerplays": {
-    "peerplaysWS": "wss://charlie.peerplays.download/api",
-    "peerplaysFaucetURL": "http://charlie.peerplays.download/faucet/api/v1/accounts",
+    "peerplaysWS": "wss://dick.peerplays.download/api",
+    "peerplaysFaucetURL": "https://dick.peerplays.download/faucet/api/v1/accounts",
     "referrer": "1.2.0",
     "sendAssetId": "1.3.0",
     "paymentAccountID": "1.2.19",
-    "paymentAccountWIF": "5JVfJT1vTE4qdHcuFJxKJjcQdCPeNHt3WvudQzzCQ4LSq1H31gV",
-    "paymentReceiver": "1.2.436",
-    "paymentReceiverWIF": "5Hyve2Y4pNatF159hE7fi8dw7kbvYxHA4u9Fkii7DMgK9up42bo"
+    "paymentAccountWIF": "5Jy7pB4kmodpgLdrAMRr3U311AZhroYHXGBm6bsAmDHQ34pJCpn",
+    "paymentReceiver": "1.2.20",
+    "paymentReceiverWIF": "5KWi8py7bdMdvYB3hX8B9vopaxe91Fc4kCEqEF3qYxCssesyAUi",
+    "ticketPrice": 1,
+    "ticketAssetID": "1.3.0",
+    "maxTicketSupply": 10000000
   },
   "mailer": {
     "host": "smtp.gmail.com",
@@ -39,5 +42,5 @@
   "s3": {
     "bucket": "nh5050-dev"
   },
-  "cdnUrl": "https://example.com/"
+  "cdnUrl": "http://d2auf3ow1jba87.cloudfront.net"
 }

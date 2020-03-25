@@ -63,11 +63,11 @@ class PeerplaysRepository {
 
       await tr.set_required_fees();
       tr.add_signer(senderPKey, senderPKey.toPublicKey().toPublicKeyString());
-      logger.trace('serialized transaction:', JSON.stringify(tr.serialize(), null, 2));
+      console.trace('serialized transaction:', JSON.stringify(tr.serialize(), null, 2));
       [result] = await tr.broadcast();
       result.amount = amount;
     } catch (e) {
-      logger.error(e.message);
+      console.error(e.message);
       throw e;
     }
 
@@ -80,7 +80,7 @@ class PeerplaysRepository {
     try {
       account = await this.peerplaysConnection.dbAPI.exec('get_account_by_name', [name]);
     } catch (e) {
-      logger.warn('Peerplays returns error', e.message);
+      console.warn('Peerplays returns error', e.message);
       throw new Error('Fetch account error');
     }
 
@@ -123,6 +123,82 @@ class PeerplaysRepository {
 
   async sendPPYFromReceiverAccount(accountId, amount) {
     return this.sendPPY(accountId, amount, config.peerplays.paymentReceiver, this.receiverPKey);
+  }
+
+  randomizeLottoName() {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+    for (let i = 0; i < 16; i++) { text += possible.charAt(Math.floor(Math.random() * possible.length)); }
+
+    return text;
+}
+
+  async createLottery(userPeerplaysId, name, description, drawDate, userPKey) {
+    const tr = new this.peerplaysConnection.TransactionBuilder();
+    let result;
+
+    try {
+      tr.add_type_operation('lottery_asset_create', {
+        issuer: userPeerplaysId,
+        symbol: this.randomizeLottoName(),
+        precision: 0,
+        extensions: {
+          benefactors: [{
+            id: userPeerplaysId,
+            share: new BigNumber(50).shiftedBy(2).toNumber()
+          }],
+          owner: config.peerplays.ticketAssetID,
+          winning_tickets: [new BigNumber(50).shiftedBy(2).toNumber()],
+          ticket_price: {
+              amount: new BigNumber(config.peerplays.ticketPrice).toNumber(),
+              asset_id: config.peerplays.ticketAssetID
+          },
+          end_date: Math.floor(new Number(drawDate)/1000), // milliseconds to seconds
+          ending_on_soldout: false,
+          is_active: true
+        },
+        common_options: {
+          max_supply: Number(config.peerplays.maxTicketSupply),
+          market_fee_percent: 0,
+          max_market_fee: 1000000000000000,
+          issuer_permissions: 79,
+          flags: 0,
+          core_exchange_rate: {
+              base: {
+                  amount: 1,
+                  asset_id: '1.3.0'
+              },
+              quote: {
+                  amount: 1,
+                  asset_id: '1.3.1'
+              }
+          },
+          whitelist_authorities: [],
+          blacklist_authorities: [],
+          whitelist_markets: [],
+          blacklist_markets: [],
+          description: JSON.stringify({
+            lottoName: name.substring(0,40),
+            description: description.substring(0,100),
+            drawType: 1
+            }),
+          extensions: []
+        },
+        is_prediction_market: false
+      });
+
+
+      await tr.set_required_fees();
+      tr.add_signer(userPKey, userPKey.toPublicKey().toPublicKeyString());
+      console.trace('serialized transaction:', JSON.stringify(tr.serialize()));
+      [result] = await tr.broadcast();
+    } catch (e) {
+      console.error(e.message);
+      throw e;
+    }
+
+    return result;
   }
 }
 
