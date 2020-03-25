@@ -2,6 +2,7 @@ const RestError = require('../errors/rest.error');
 const authValidator = require('../validators/auth.validator');
 const userValidator = require('../validators/user.validator');
 const userService = require('../services/user.service');
+const ValidateError = require('./../errors/validate.error');
 
 /**
  * @swagger
@@ -19,7 +20,7 @@ const userService = require('../services/user.service');
  *        type: string
  *        format: password
  */
-class UsersController {
+export default class UsersController {
   constructor(conns) {
     this.userService = new userService(conns);
     this.userValidator = new userValidator();
@@ -236,5 +237,3 @@ class UsersController {
   }
 
 }
-
-module.exports = UsersController;

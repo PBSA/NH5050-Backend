@@ -13,8 +13,8 @@ const RestError = require('./errors/rest.error');
 const MethodNotAllowedError = require('./errors/method-not-allowed.error');
 const UserRepository = require('./repositories/user.repository');
 
-const UsersController = require('./controllers/users.controller');
-const OrganizationsController = require('./controllers/organizations.controller');
+import UsersController from './controllers/users.controller';
+import OrganizationsController from './controllers/organizations.controller';
 
 /**
  * @swagger

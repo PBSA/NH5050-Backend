@@ -2,7 +2,7 @@
 import OrganizationRepository from '../repositories/organization.repository';
 import {organizationType} from '../constants/organization';
 
-class OrganizationService {
+export default class OrganizationService {
   
   constructor() {
     this.repository = new OrganizationRepository();
@@ -31,6 +31,16 @@ class OrganizationService {
     return organization[0].getPublic();
   }
 
-}
+  async setLogoUrl(id, logoUrl) {
+    const org = await this.repository.findByPk(id);
 
-module.exports = OrganizationService;
+    if (!org) {
+      throw new Error(this.errors.NOT_FOUND);
+    }
+
+    org.logo_url = logoUrl;
+    await org.save();
+    return org.getPublic();
+  }
+
+}
