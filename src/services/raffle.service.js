@@ -1,4 +1,5 @@
 const RaffleRepository = require('../repositories/raffle.repository');
+const BundleRepository = require('../repositories/bundle.repository');
 const UserRepository = require('../repositories/user.repository');
 const PeerplaysRepository = require('../repositories/peerplays.repository');
 const {Login} = require('peerplaysjs-lib');
@@ -9,6 +10,7 @@ class RaffleService {
     this.raffleRepository = new RaffleRepository();
     this.userRepository = new UserRepository();
     this.peerplaysRepository = new PeerplaysRepository(conns);
+    this.bundleRepository = new BundleRepository();
 
     this.errors = {
       NOT_FOUND: 'Raffle not found',
@@ -89,6 +91,18 @@ class RaffleService {
     });
 
     return Raffle.getPublic();
+  }
+
+  async addBundle(data) {
+    const Bundle = await this.bundleRepository.model.create({
+      ...data
+    });
+    return Bundle.getPublic();
+  }
+
+  async getTicketBundles(raffleId) {
+    const Bundles = await this.bundleRepository.findBundlesByRaffleId(raffleId);
+    return Bundles.map((bundle)=> bundle.getPublic());
   }
 }
 
