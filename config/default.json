@@ -34,13 +34,13 @@
     "port": 587,
     "secure": false,
     "auth": {
-      "user": "prabhjot.narula@gmail.com",
-      "pass": "mgclffomjvbzwhvu"
+      "user": "***REMOVED***",
+      "pass": "***REMOVED***"
     },
     "sender": "Prabhjot Singh"
   },
   "s3": {
     "bucket": "nh5050-dev"
   },
-  "cdnUrl": "https://example.com/"
+  "cdnUrl": "http://d2auf3ow1jba87.cloudfront.net"
 }

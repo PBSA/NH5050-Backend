@@ -7,7 +7,7 @@ import OrganizationValidator from '../validators/organization.validator';
 export default class OrganizationsController {
 
   constructor(conns) {
-    this.organizationService = new OrganizationService();
+    this.organizationService = new OrganizationService(conns);
     this.fileService = new FileService(conns);
     this.authValidator = new AuthValidator();
     this.organizationValidator = new OrganizationValidator();

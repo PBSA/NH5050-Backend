@@ -84,7 +84,7 @@ export default class FileService {
    */
   _filename(req, file, done) {
     const ext = path.extname(file.originalname);
-    const name = `${randomString.generate(10)}-${randomString.generate(13)}-${randomString.generate(8)}${ext}`;
+    const name = `pics/${randomString.generate(10)}-${randomString.generate(13)}-${randomString.generate(8)}${ext}`;
     done(null, name);
   }
 

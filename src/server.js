@@ -15,7 +15,7 @@ const UserRepository = require('./repositories/user.repository');
 
 import UsersController from './controllers/users.controller';
 import OrganizationsController from './controllers/organizations.controller';
-const RafflesController = require('./controllers/raffles.controller');
+import RafflesController from './controllers/raffles.controller';
 
 /**
  * @swagger
