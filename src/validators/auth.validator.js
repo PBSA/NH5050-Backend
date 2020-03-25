@@ -6,17 +6,12 @@ const profileConstants = require('../constants/profile');
 const userRepository = require('../repositories/user.repository');
 
 class AuthValidator extends BaseValidator {
-
-  /**
-   * @param {UserRepository} opts.userRepository
-   * @param {VerificationTokenRepository} opts.verificationTokenRepository
-   * @param {ResetTokenRepository} opts.resetTokenRepository
-   */
   constructor() {
     super();
 
     this.userRepository = new userRepository();
     this.validatePlayerSignUp = this.validatePlayerSignUp.bind(this);
+    this.validateSignIn = this.validateSignIn.bind(this);
     this.loggedOnly = this.loggedOnly.bind(this);
     this.loggedAdminOnly = this.loggedAdminOnly.bind(this);
   }
@@ -74,7 +69,7 @@ class AuthValidator extends BaseValidator {
         });
       }
 
-      if (alreadyExists && alreadyExists.mobile === mobile) {
+      if (alreadyExists && alreadyExists.mobile === this.userRepository.normalizePhoneNumber(mobile)) {
         throw new ValidateError(400, 'Validate error', {
           mobile: 'This mobile number is already used'
         });
@@ -83,6 +78,26 @@ class AuthValidator extends BaseValidator {
       return body;
     });
   }
+
+  validateSignIn() {
+    const bodySchema = {
+      email: Joi.string().required(),
+      password: Joi.string().required()
+    };
+
+    return this.validate(null, bodySchema, async (req, query, body) => {
+      const {email} = body;
+
+      const user = await this.userRepository.findByEmail(email.toLowerCase());
+
+      if (user && user.status === profileConstants.status.inactive) {
+        throw new ValidateError(403, 'Your account has been inactivated. Please contact your admin.');
+      }
+
+      return body;
+    });
+  }
+
 }
 
 module.exports = AuthValidator;
