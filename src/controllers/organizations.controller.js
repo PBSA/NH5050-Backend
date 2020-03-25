@@ -1,12 +1,14 @@
 import RestError from '../errors/rest.error';
 import OrganizationService from '../services/organization.service';
+import FileService from '../services/file.service';
 import AuthValidator from '../validators/auth.validator';
 import OrganizationValidator from '../validators/organization.validator';
 
-class OrganizationsController {
+export default class OrganizationsController {
 
-  constructor() {
+  constructor(conns) {
     this.organizationService = new OrganizationService();
+    this.fileService = new FileService(conns);
     this.authValidator = new AuthValidator();
     this.organizationValidator = new OrganizationValidator();
   }
@@ -103,7 +105,45 @@ class OrganizationsController {
         this.authValidator.loggedAdminOnly,
         this.organizationValidator.validateOrganization,
         this.createOrUpdateOrganization.bind(this)
-      ]
+      ],
+      /**
+       * @swagger
+       *
+       * /organization/uploadlogo:
+       *  post:
+       *    description: Add or change organization logo
+       *    summary: Add or change organization logo
+       *    produces:
+       *      - application/json
+       *    tags:
+       *      - admins
+       *      - organization
+       *    parameters:
+       *      - in: formData
+       *        name: file
+       *        type: file
+       *        description: The file to upload.
+       *    consumes:
+       *      - multipart/form-data
+       *    responses:
+       *      200:
+       *        description: Organization data
+       *        schema:
+       *          $ref: '#/definitions/OrganizationPublic'
+       *      401:
+       *        description: Error user unauthorized
+       *        schema:
+       *          $ref: '#/definitions/UnauthorizedError'
+       *      400:
+       *        description: Error form validation
+       *        schema:
+       *          $ref: '#/definitions/ValidateError'
+       */
+      [
+        'post', '/api/v1/organization/uploadlogo',
+        this.authValidator.loggedAdminOnly,
+        this.uploadLogo.bind(this)
+      ],
     ];
   }
 
@@ -123,6 +163,9 @@ class OrganizationsController {
     return this.organizationService.createOrUpdateOrganization(organizationData);
   }
 
-}
+  async uploadLogo(user, data, req, res) {
+    const url = await this.fileService.saveImage(req, res);
+    return await this.organizationService.setLogoUrl(user.organization_id, url);
+  }
 
-module.exports = OrganizationsController;
+}
