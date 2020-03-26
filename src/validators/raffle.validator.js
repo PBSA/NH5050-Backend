@@ -5,6 +5,7 @@ const raffleConstants = require('../constants/raffle');
 const organizationConstants = require('../constants/organization');
 const organizationRepository = require('../repositories/organization.repository');
 const raffleRepository = require('../repositories/raffle.repository');
+const bundleRepository = require('../repositories/bundle.repository');
 const moment = require('moment');
 
 class RaffleValidator extends BaseValidator {
@@ -14,12 +15,14 @@ class RaffleValidator extends BaseValidator {
 
     this.organizationRepository = new organizationRepository();
     this.raffleRepository = new raffleRepository();
+    this.bundleRepository = new bundleRepository();
 
     this.getRaffleById = this.getRaffleById.bind(this);
     this.getRafflesByOrganization = this.getRafflesByOrganization.bind(this);
     this.addRaffle = this.addRaffle.bind(this);
     this.addBundle = this.addBundle.bind(this);
     this.getTicketBundles = this.getTicketBundles.bind(this);
+    this.createPayment = this.createPayment.bind(this);
   }
 
   getRaffleById() {
@@ -296,6 +299,34 @@ class RaffleValidator extends BaseValidator {
       }
 
       return query.raffleId;
+    });
+  }
+
+  createPayment() {
+    const querySchema = {
+      bundleId: Joi.number().integer().required()
+    };
+
+    return this.validate(querySchema, null, async (req, query) => {
+      const bundleExists = await this.bundleRepository.findByPk(query.bundleId, {
+        include: [{
+          model: this.raffleRepository.model
+        }]
+      });
+
+      if(!bundleExists) {
+        throw new ValidateError(400, 'Validate error', {
+          bundleId: 'Ticket bundle not found'
+        });
+      }
+
+      if(moment(bundleExists.raffle.end_datetime).diff(moment()) < 0) {
+        throw new ValidateError(400, 'Validate error', {
+          bundleId: 'Raffle has already ended'
+        });
+      }
+
+      return bundleExists.price;
     });
   }
 }

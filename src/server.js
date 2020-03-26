@@ -58,7 +58,11 @@ class Server {
     return new Promise((resolve) => {
       this.app = express();
       this.app.use(bodyParser.urlencoded({extended: true}));
-      this.app.use(bodyParser.json());
+      this.app.use(bodyParser.json({
+        verify: (req, res, buf) => {
+          req.rawBody = buf
+        }
+      }));
 
       if (config.cors) {
         const corsOptions = {
