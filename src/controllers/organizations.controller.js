@@ -248,8 +248,16 @@ export default class OrganizationsController {
     }
   }
 
-  createOrUpdateOrganization(user, organizationData) {
-    return this.organizationService.createOrUpdateOrganization(organizationData);
+  async createOrUpdateOrganization(user, organizationData) {
+    try{
+      return await this.organizationService.createOrUpdateOrganization(user, organizationData);
+    } catch(e) {
+      if(e.message == this.organizationService.errors.OTHER_ORGANIZATION || e.message == this.organizationService.errors.SUPER_ADMIN_ONLY) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
   }
 
   async getBeneficiaries(user, organizationId) {
@@ -264,8 +272,16 @@ export default class OrganizationsController {
     }
   }
 
-  createOrUpdateBeneficiary(user, organizationData) {
-    return this.organizationService.createOrUpdateBeneficiary(user.organization_id, organizationData);
+  async createOrUpdateBeneficiary(user, organizationData) {
+    try{
+      return await this.organizationService.createOrUpdateBeneficiary(user.organization_id, organizationData);
+    }catch(e) {
+      if (e.message === this.organizationService.errors.NOT_FOUND || e.message == this.organizationService.errors.INVALID_BENEFICIARY) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
   }
 
   async uploadLogo(user, data, req, res) {

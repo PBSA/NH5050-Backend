@@ -15,8 +15,10 @@ export default class OrganizationService {
     this.fileService = new FileService(conns);
 
     this.errors = {
-      NOT_FOUND: 'NOT_FOUND',
-      INVALID_BENEFICIARY: 'INVALID_BENEFICIARY'
+      NOT_FOUND: 'NOT FOUND',
+      INVALID_BENEFICIARY: 'INVALID BENEFICIARY',
+      OTHER_ORGANIZATION: 'Cannot update another organization',
+      SUPER_ADMIN_ONLY: 'Only super admin can create an organization'
     };
   }
 
@@ -30,7 +32,15 @@ export default class OrganizationService {
     return org.getPublic();
   }
 
-  async createOrUpdateOrganization(organizationData) {
+  async createOrUpdateOrganization(user, organizationData) {
+    if(organizationData.id && user.organization_id !== organizationData.id) {
+      throw new Error(this.errors.OTHER_ORGANIZATION);
+    }
+
+    if(!organizationData.id && user.organization_id) {
+      throw new Error(this.errors.SUPER_ADMIN_ONLY);
+    }
+
     organizationData.type = organizationType.organization;
     const organization = await this.organizationRepository.model.upsert({
       ...organizationData,
