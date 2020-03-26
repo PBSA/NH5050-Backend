@@ -60,7 +60,7 @@ export default class OrganizationsController {
        *              example: 404
        *            error:
        *              type: string
-       *              example: User not found
+       *              example: organization not found
        */
       [
         'get', '/api/v1/organization',
@@ -77,7 +77,7 @@ export default class OrganizationsController {
        *    - organization
        *    summary: create or update an organization
        *    operationId: addOrganization
-       *    description: Creates or updates an organizatioon in the database
+       *    description: Creates or updates an organization in the database
        *    consumes:
        *    - application/json
        *    produces:
@@ -144,6 +144,95 @@ export default class OrganizationsController {
         this.authValidator.loggedAdminOnly,
         this.uploadLogo.bind(this)
       ],
+      /**
+       * @swagger
+       *
+       * /organization/beneficiary:
+       *  get:
+       *    tags:
+       *    - developers
+       *    - organization
+       *    summary: get beneficiaries as per organization id
+       *    operationId: getBeneficiaries
+       *    description: returns all beneficiaries for a given organization
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: query
+       *      name: organizationId
+       *      description: pass the id of the organization
+       *      required: true
+       *      type: string
+       *    responses:
+       *      200:
+       *        description: list of beneficiaries
+       *        schema:
+       *          type: array
+       *          items:
+       *            $ref: '#/definitions/OrganizationPublic'
+       *      400:
+       *        description: bad input parameter
+       *        schema:
+       *          $ref: '#/definitions/ValidateError'
+       *      401:
+       *        description: Error user unauthorized
+       *        schema:
+       *          $ref: '#/definitions/UnauthorizedError'
+       *      404:
+       *        description: Error organization not found
+       *        schema:
+       *          properties:
+       *            status:
+       *              type: number
+       *              example: 404
+       *            error:
+       *              type: string
+       *              example: organization not found
+       */
+      [
+        'get', '/api/v1/organization/beneficiary',
+        this.organizationValidator.getBeneficiaries,
+        this.getBeneficiaries.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /organization/beneficiary:
+       *  post:
+       *    tags:
+       *    - admins
+       *    - organization
+       *    summary: create or update a beneficiary
+       *    operationId: addBeneficiary
+       *    description: Creates or updates an beneficiary in the database
+       *    consumes:
+       *    - application/json
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: body
+       *      name: beneficiary
+       *      description: Beneficiary to add or update
+       *      schema:
+       *        $ref: '#/definitions/Organization'
+       *    responses:
+       *      200:
+       *        description: beneficiary updated
+       *        schema:
+       *          $ref: '#/definitions/OrganizationPublic'
+       *      201:
+       *        description: beneficiary created
+       *        schema:
+       *          $ref: '#/definitions/OrganizationPublic'
+       *      400:
+       *        description: invalid input, object invalid
+       */
+      [
+        'post', '/api/v1/organization/beneficiary',
+        this.authValidator.loggedAdminOnly,
+        this.organizationValidator.validateOrganization,
+        this.createOrUpdateBeneficiary.bind(this)
+      ],
     ];
   }
 
@@ -159,8 +248,40 @@ export default class OrganizationsController {
     }
   }
 
-  createOrUpdateOrganization(user, organizationData) {
-    return this.organizationService.createOrUpdateOrganization(organizationData);
+  async createOrUpdateOrganization(user, organizationData) {
+    try{
+      return await this.organizationService.createOrUpdateOrganization(user, organizationData);
+    } catch(e) {
+      if(e.message == this.organizationService.errors.OTHER_ORGANIZATION || e.message == this.organizationService.errors.SUPER_ADMIN_ONLY) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
+  }
+
+  async getBeneficiaries(user, organizationId) {
+    try {
+      return await this.organizationService.getBeneficiaries(organizationId);
+    } catch (e) {
+      if (e.message === this.organizationService.errors.NOT_FOUND) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
+  }
+
+  async createOrUpdateBeneficiary(user, organizationData) {
+    try{
+      return await this.organizationService.createOrUpdateBeneficiary(user.organization_id, organizationData);
+    }catch(e) {
+      if (e.message === this.organizationService.errors.NOT_FOUND || e.message == this.organizationService.errors.INVALID_BENEFICIARY) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
   }
 
   async uploadLogo(user, data, req, res) {

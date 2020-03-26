@@ -125,7 +125,7 @@ class OrganizationModel extends Model {
    *      website_url:
    *        type: string
    *
-   * @returns {UserPublicObject}
+   * @returns {OrganizationPublicObject}
    */
   getPublic() {
     return {
