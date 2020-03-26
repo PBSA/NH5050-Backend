@@ -4,18 +4,27 @@ const ValidateError = require('../errors/validate.error');
 const organizationConstants = require('./../constants/organization');
 const usStates = require('./data/us.states').default;
 
-class OrganizationValidator extends BaseValidator {
+export default class OrganizationValidator extends BaseValidator {
 
   constructor() {
     super();
 
     this.getOrganization = this.getOrganization.bind(this);
+    this.getBeneficiaries = this.getBeneficiaries.bind(this);
     this.validateOrganization = this.validateOrganization.bind(this);
   }
 
   getOrganization() {
     const querySchema = {
-      id: Joi.number().integer().required()
+      organizationId: Joi.number().integer().required()
+    };
+
+    return this.validate(querySchema, null, (req, query) => query.organizationId);
+  }
+
+  getBeneficiaries() {
+    const querySchema = {
+      organizationId: Joi.number().integer().required()
     };
 
     return this.validate(querySchema, null, (req, query) => query.organizationId);
@@ -52,5 +61,3 @@ class OrganizationValidator extends BaseValidator {
   }
 
 }
-
-module.exports = OrganizationValidator;
