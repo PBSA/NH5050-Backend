@@ -18,6 +18,8 @@ class RaffleValidator extends BaseValidator {
     this.getRaffleById = this.getRaffleById.bind(this);
     this.getRafflesByOrganization = this.getRafflesByOrganization.bind(this);
     this.addRaffle = this.addRaffle.bind(this);
+    this.addBundle = this.addBundle.bind(this);
+    this.getTicketBundles = this.getTicketBundles.bind(this);
   }
 
   getRaffleById() {
@@ -54,7 +56,7 @@ class RaffleValidator extends BaseValidator {
       progressive_draw_percent: Joi.number().min(0),
       organization_percent: Joi.number().min(0),
       beneficiary_percent: Joi.number().min(0)
-    }
+    };
 
     return this.validate(null, bodySchema, async(req, query, body) => {
       const {id, organization_id, draw_type, progressive_draw_id, admin_fees_percent, donation_percent, raffle_draw_percent, progressive_draw_percent, organization_percent, beneficiary_percent} = body;
@@ -239,6 +241,63 @@ class RaffleValidator extends BaseValidator {
     });
   }
 
+  addBundle() {
+    const bodySchema = {
+      quantity: Joi.number().integer().min(1).max(1000000).required(),
+      price: Joi.number().precision(2).min(0.50).max(999999.99).required(),
+      raffle_id: Joi.number().integer().required()
+    };
+
+    return this.validate(null, bodySchema, async(req, query, body) => {
+      const {raffle_id} = body;
+
+      const raffleExists = await this.raffleRepository.findByPk(raffle_id);
+
+      if(!raffleExists) {
+        throw new ValidateError(400, 'Validate error', {
+          raffle_id: 'Raffle not found'
+        });
+      }
+
+      if(raffleExists.organization_id !== req.user.organization_id) {
+        throw new ValidateError(400, 'Validate error', {
+          raffle_id: 'This raffle doesn\'t belong to your organization'
+        });
+      }
+
+      if(raffleExists.draw_type === raffleConstants.drawType.progressive) {
+        throw new ValidateError(400, 'Validate error', {
+          raffle_id: 'Cannot create ticket bundle for a progressive draw'
+        });
+      }
+
+      if(moment(raffleExists.start_datetime).diff(moment()) > 0) {
+        throw new ValidateError(400, 'Validate error', {
+          raffle_id: 'Cannot create ticket bundles for a draw that has already started'
+        });
+      }
+
+      return body;
+    });
+  }
+
+  getTicketBundles() {
+    const querySchema = {
+      raffleId: Joi.number().integer().required()
+    };
+
+    return this.validate(querySchema, null, async (req, query) => {
+      const raffleExists = await this.raffleRepository.findByPk(query.raffleId);
+
+      if(!raffleExists) {
+        throw new ValidateError(400, 'Validate error', {
+          id: 'Raffle not found'
+        });
+      }
+
+      return query.raffleId;
+    });
+  }
 }
 
 module.exports = RaffleValidator;

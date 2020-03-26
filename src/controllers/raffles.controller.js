@@ -3,7 +3,7 @@ const raffleValidator = require('../validators/raffle.validator');
 const authValidator = require('../validators/auth.validator');
 const raffleService = require('../services/raffle.service');
 
-class RafflesController {
+export default class RafflesController {
   constructor(conns) {
     this.raffleService = new raffleService(conns);
     this.raffleValidator = new raffleValidator();
@@ -138,6 +138,73 @@ class RafflesController {
         this.authValidator.loggedAdminOnly,
         this.raffleValidator.addRaffle,
         this.addRaffle.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /raffles/ticketbundles:
+       *  post:
+       *    tags:
+       *    - admin
+       *    - raffles
+       *    summary: adds a new bundle
+       *    operationId: addBundle
+       *    description: Adds a bundle in the database
+       *    consumes:
+       *    - application/json
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: body
+       *      name: bundle
+       *      description: bundle to add
+       *      schema:
+       *        $ref: '#/definitions/Bundle'
+       *    responses:
+       *      200:
+       *        description: bundle created
+       *        schema:
+       *          $ref: '#/definitions/BundlePublic'
+       *      400:
+       *        description: invalid input, object invalid
+       */
+      [
+        'post','/api/v1/raffles/ticketbundles',
+        this.authValidator.loggedAdminOnly,
+        this.raffleValidator.addBundle,
+        this.addBundle.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /ticketbundles
+       *  get:
+       *    tags:
+       *    - developers
+       *    - raffles
+       *    summary: get ticket bundles
+       *    operationId: getTicketBundles
+       *    description: get all ticket bundles from database
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: parameter
+       *      name: raffleId
+       *      description: pass the raffle id for which to get bundles
+       *      type: integer
+       *      required: true
+       *    responses:
+       *      200:
+       *        description: ticket bundles
+       *        schema:
+       *          $ref: '#/definitions/Bundles'
+       *      400:
+       *        description: bad input parameter
+       */
+      [
+        'get', '/api/v1/ticketbundles',
+        this.raffleValidator.getTicketBundles,
+        this.getTicketBundles.bind(this)
       ]
     ];
   }
@@ -166,6 +233,16 @@ class RafflesController {
     return await this.raffleService.addRaffle(user, data);
   }
 
-}
+  async addBundle(user, data) {
+    return await this.raffleService.addBundle(data);
+  }
 
-module.exports = RafflesController;
+  async getTicketBundles(user, raffleId) {
+    try{
+      return await this.raffleService.getTicketBundles(raffleId);
+    } catch (e) {
+      throw new RestError(e.message, 500);
+    }
+  }
+
+}
