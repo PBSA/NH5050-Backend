@@ -26,5 +26,10 @@
   "s3": {
     "bucket": "S3_BUCKET"
   },
-  "cdnUrl": "CDN_URL"
+  "cdnUrl": "CDN_URL",
+  "stripe": {
+    "publishableKey": "STRIPE_PUBLISHABLE_KEY",
+    "secretKey": "STRIPE_SECRET_KEY",
+    "endpointSecret": "STRIPE_ENDPOINT_SECRET"
+  }
 }

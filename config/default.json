@@ -42,5 +42,10 @@
   "s3": {
     "bucket": "nh5050-dev"
   },
-  "cdnUrl": "http://d2auf3ow1jba87.cloudfront.net"
+  "cdnUrl": "http://d2auf3ow1jba87.cloudfront.net",
+  "stripe": {
+    "publishableKey": "pk_test_eXMu4Pj53sjl7Ff2pj3xYPh8",
+    "secretKey": "sk_test_vC4hHCnGd6c2q7l4XZZEtDV0",
+    "endpointSecret": "whsec_gqPI1tTE8B8JzNLtUlUOCB2hZnmoSwFt"
+  }
 }

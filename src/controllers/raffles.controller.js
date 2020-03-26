@@ -177,18 +177,18 @@ export default class RafflesController {
       /**
        * @swagger
        *
-       * /ticketbundles
+       * /ticketbundles:
        *  get:
        *    tags:
        *    - developers
        *    - raffles
        *    summary: get ticket bundles
        *    operationId: getTicketBundles
-       *    description: get all ticket bundles from database
+       *    description: get all ticket bundles from database for a raffle
        *    produces:
        *    - application/json
        *    parameters:
-       *    - in: parameter
+       *    - in: query
        *      name: raffleId
        *      description: pass the raffle id for which to get bundles
        *      type: integer
@@ -205,6 +205,48 @@ export default class RafflesController {
         'get', '/api/v1/ticketbundles',
         this.raffleValidator.getTicketBundles,
         this.getTicketBundles.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /createpayment:
+       *  get:
+       *    tags:
+       *    - developers
+       *    - raffles
+       *    summary: create payment intent
+       *    operationId: createPayment
+       *    description: get the ticket bundle id and return the client secret which will be required to initiate payment in the frontend
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: query
+       *      name: bundleId
+       *      description: payment to be created
+       *      type: integer
+       *      required: true
+       *    responses:
+       *      200:
+       *        description: client secret
+       *        type: object
+       *        properties:
+       *          paymentId:
+       *            type: string
+       *          clientSecret:
+       *            type: string
+       *          publishableKey:
+       *            type: string
+       *      400:
+       *        description: bad input parameter
+       */
+      [
+        'get', '/api/v1/createpayment',
+        this.raffleValidator.createPayment,
+        this.createPayment.bind(this)
+      ],
+      [
+        'post', '/api/v1/stripewebhook',
+        this.stripePaymentWebhook.bind(this)
       ]
     ];
   }
@@ -245,4 +287,15 @@ export default class RafflesController {
     }
   }
 
+  async createPayment(user, price) {
+    try{
+      return await this.raffleService.createPayment(price);
+    } catch (e) {
+      throw new RestError(e.message, 500);
+    }
+  }
+
+  stripePaymentWebhook(user, pure, req) {
+    return this.raffleService.stripePaymentWebhook(req);
+  }
 }
