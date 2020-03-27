@@ -8,7 +8,7 @@ const config = require('config');
 const stripe = require('stripe')(config.stripe.secretKey);
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-class RaffleService {
+export default class RaffleService {
   constructor(conns) {
     this.raffleRepository = new RaffleRepository();
     this.userRepository = new UserRepository();
@@ -152,6 +152,24 @@ class RaffleService {
     // Return a response to acknowledge receipt of the event
     return {received: true};
   }
-}
 
-module.exports = RaffleService;
+  async deleteImageFromCDN(raffle) {
+    if (raffle.image_url && raffle.image_url.startsWith(config.cdnUrl)) {
+      await this.fileService.delete('pics/' + path.basename(raffle.image_url));
+    }
+  }
+
+  async setImageUrl(id, imageUrl) {
+    const raffle = await this.raffleRepository.findByPk(id);
+
+    if (!raffle) {
+      throw new Error(this.errors.NOT_FOUND);
+    }
+
+    await this.deleteImageFromCDN(raffle);
+
+    raffle.image_url = imageUrl;
+    await raffle.save();
+    return raffle.getPublic();
+  }
+}

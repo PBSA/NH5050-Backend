@@ -1,13 +1,15 @@
-const RestError = require('../errors/rest.error');
-const raffleValidator = require('../validators/raffle.validator');
-const authValidator = require('../validators/auth.validator');
-const raffleService = require('../services/raffle.service');
+import RestError from '../errors/rest.error';
+import RaffleService from '../services/raffle.service';
+import FileService from '../services/file.service';
+import RaffleValidator from '../validators/raffle.validator';
+import AuthValidator from '../validators/auth.validator';
 
 export default class RafflesController {
   constructor(conns) {
-    this.raffleService = new raffleService(conns);
-    this.raffleValidator = new raffleValidator();
-    this.authValidator = new authValidator();
+    this.raffleService = new RaffleService(conns);
+    this.fileService = new FileService(conns);
+    this.raffleValidator = new RaffleValidator();
+    this.authValidator = new AuthValidator();
   }
 
   /**
@@ -177,6 +179,44 @@ export default class RafflesController {
       /**
        * @swagger
        *
+       * /raffles/uploadimage:
+       *  post:
+       *    description: Add or change raffle image
+       *    summary: Add or change raffle image
+       *    produces:
+       *      - application/json
+       *    tags:
+       *      - admins
+       *      - raffles
+       *    parameters:
+       *      - in: formData
+       *        name: file
+       *        type: file
+       *        description: The file to upload.
+       *    consumes:
+       *      - multipart/form-data
+       *    responses:
+       *      200:
+       *        description: Raffle data
+       *        schema:
+       *          $ref: '#/definitions/RafflePublic'
+       *      401:
+       *        description: Error user unauthorized
+       *        schema:
+       *          $ref: '#/definitions/UnauthorizedError'
+       *      400:
+       *        description: Error form validation
+       *        schema:
+       *          $ref: '#/definitions/ValidateError'
+       */
+      [
+        'post', '/api/v1/raffles/uploadimage',
+        this.authValidator.loggedAdminOnly,
+        this.uploadImage.bind(this)
+      ],
+      /**
+       * @swagger
+       *
        * /ticketbundles:
        *  get:
        *    tags:
@@ -297,5 +337,10 @@ export default class RafflesController {
 
   stripePaymentWebhook(user, pure, req) {
     return this.raffleService.stripePaymentWebhook(req);
+  }
+
+  async uploadImage(user, data, req, res) {
+    const url = await this.fileService.saveImage(req, res);
+    return await this.raffleService.setImageUrl(user.organization_id, url);
   }
 }
