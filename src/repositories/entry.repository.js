@@ -7,8 +7,8 @@ class EntryRepository extends BasePostgresRepository {
     super(model);
   }
 
-  async findAll() {
-    return this.model.findAll();
+  async findAll(options) {
+    return this.model.findAll(options);
   }
 
 }

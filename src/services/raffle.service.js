@@ -213,9 +213,9 @@ export default class RaffleService {
           as: 'player'
         },{
           model: this.bundleRepository.model,
-          as: 'ticket_bundle'
+          as: 'bundle'
         },{
-          model: this.organizationRepository.model,
+          model: this.beneficiaryRepository.model,
           as: 'beneficiary'
         },{
           model: this.userRepository.model,
@@ -223,21 +223,21 @@ export default class RaffleService {
         }]
       });
 
-      if(SaleExists.length > 0 && SaleExists[0].payment_status === saleConstants.paymentStatus.success) {
+      if(SaleExists && SaleExists.length > 0 && SaleExists[0].payment_status === saleConstants.paymentStatus.success) {
         const Entries = await this.entryRepository.findAll({
           where: {
             ticket_sales_id: SaleExists[0].id
           }
         });
 
-        if(Entries) {
+        if(Entries.length > 0) {
           return {
             entries: this.getEntriesArray(Entries),
             ticket_sales: {
               ...SaleExists[0].get({plain: true}),
               player: SaleExists[0].player.getPublic(),
-              ticket_bundle: SaleExists[0].ticket_bundle.getPublic(),
-              beneficiary: SaleExists[0].beneficiary.getPublic(),
+              ticket_bundle: SaleExists[0].bundle.getPublic(),
+              beneficiary: SaleExists[0].beneficiary.get({plain: true}),
               seller: SaleExists[0].seller.getPublic()
             }
           };
@@ -350,7 +350,12 @@ export default class RaffleService {
 
     await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.raffle.raffle_name, bundle.raffle_id);
 
-    const beneficiary = await this.organizationRepository.findByPk(Sale[0].beneficiary_id);
+    const beneficiary = await this.beneficiaryRepository.findByPk(Sale[0].beneficiary_id, {
+      include: [{
+        model: this.organizationRepository.model,
+        as: 'user'
+      }]
+    });
 
     return {
       entries: this.getEntriesArray(Entries),
@@ -358,7 +363,10 @@ export default class RaffleService {
         ...Sale[0].get({plain: true}),
         player: player.getPublic(),
         ticket_bundle: bundle.getPublic(),
-        beneficiary: beneficiary.getPublic()
+        beneficiary: {
+          ...beneficiary.get({plain: true}),
+          user: beneficiary.user.getPublic()
+        }
       }
     };
   }
@@ -436,5 +444,47 @@ export default class RaffleService {
         seller: sale.seller ? sale.seller.getPublic() : null
       };
     });
+  }
+
+  async getTicketSaleDetails(ticketId) {
+    const Sale = await this.saleRepository.findByPk(ticketId,{
+      include: [{
+        model: this.userRepository.model,
+        as: 'player'
+      },{
+        model: this.bundleRepository.model,
+        as: 'bundle'
+      },{
+        model: this.beneficiaryRepository.model,
+        as: 'beneficiary',
+        include: [{
+          model: this.organizationRepository.model,
+          as: 'user'
+        }]
+      },{
+        model: this.userRepository.model,
+        as: 'seller'
+      }]
+    });
+
+    const Entries = await this.entryRepository.findAll({
+      where: {
+        ticket_sales_id: ticketId
+      }
+    });
+
+    return {
+      entries: this.getEntriesArray(Entries),
+      ticket_sales: {
+        ...Sale.get({plain: true}),
+        player: Sale.player.getPublic(),
+        bundle: Sale.bundle.getPublic(),
+        beneficiary: {
+          ...Sale.beneficiary.get({plain: true}),
+          user: Sale.beneficiary.user.getPublic()
+        },
+        seller: Sale.seller ? Sale.seller.getPublic() : null
+      }
+    };
   }
 }
