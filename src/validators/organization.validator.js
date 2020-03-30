@@ -11,20 +11,11 @@ export default class OrganizationValidator extends BaseValidator {
     super();
     this.organizationRepository = new OrganizationRepository();
 
-    this.getOrganization = this.getOrganization.bind(this);
-    this.getBeneficiaries = this.getBeneficiaries.bind(this);
+    this.validateOrganizationId = this.validateOrganizationId.bind(this);
     this.validateOrganization = this.validateOrganization.bind(this);
   }
 
-  getOrganization() {
-    const querySchema = {
-      organizationId: Joi.number().integer().required()
-    };
-
-    return this.validate(querySchema, null, (req, query) => query.organizationId);
-  }
-
-  getBeneficiaries() {
+  validateOrganizationId() {
     const querySchema = {
       organizationId: Joi.number().integer().required()
     };

@@ -1,10 +1,14 @@
 
 import OrganizationRepository from '../repositories/organization.repository';
 import BeneficiaryRepository from '../repositories/beneficiary.repository';
+import UserRepository from '../repositories/user.repository';
+import UserService from '../services/user.service';
+import FileService from './file.service';
+
+import {userType} from '../constants/profile';
 import {organizationType} from '../constants/organization';
 import path from 'path';
 import config from 'config';
-import FileService from './file.service';
 import {sequelize} from '../db/index';
 
 export default class OrganizationService {
@@ -12,6 +16,8 @@ export default class OrganizationService {
   constructor(conns) {
     this.organizationRepository = new OrganizationRepository();
     this.beneficiaryRepository = new BeneficiaryRepository();
+    this.userRepository = new UserRepository();
+    this.userService = new UserService(conns);
     this.fileService = new FileService(conns);
 
     this.errors = {
@@ -45,7 +51,7 @@ export default class OrganizationService {
     const organization = await this.organizationRepository.model.upsert({
       ...organizationData,
       type: organizationType.organization
-    },{ returning: true });
+    }, {returning: true});
 
     return organization[0].getPublic();
   }
@@ -151,6 +157,64 @@ export default class OrganizationService {
       await transaction.rollback();
       throw err;
     }
+  }
+
+  async getSellers(organizationId) {
+    const sellers = await this.userRepository.model.findAll({
+      where: {
+        organization_id: organizationId,
+        user_type: userType.seller
+      }
+    });
+
+    return sellers.map(seller => seller.getPublic());
+  }
+
+  createOrUpdateSeller(organizationId, sellerData) {
+    sellerData.organization_id = organizationId;
+    sellerData.user_type = userType.seller;
+
+    return this.userService.createOrUpdateUser(sellerData);
+  }
+
+  async getAdmins(organizationId) {
+    const admins = await this.userRepository.model.findAll({
+      where: {
+        organization_id: organizationId,
+        user_type: userType.admin
+      }
+    });
+
+    return admins.map(admin => admin.getPublic());
+  }
+
+  createOrUpdateAdmin(organizationId, adminData) {
+    adminData.organization_id = organizationId;
+    adminData.user_type = userType.admin;
+
+    return this.userService.createOrUpdateUser(adminData);
+  }
+
+  async deleteAdmin(organizationId, userId) {
+    const deleted = await this.userRepository.delete({
+      where: {
+        organization_id: organizationId,
+        id: userId
+      }
+    });
+
+    return deleted !== 0;
+  }
+
+  async isBeneficiaryOf(organizationId, beneficiaryId) {
+    const binding = await this.beneficiaryRepository.model.findOne({
+      where: {
+        user_id: beneficiaryId,
+        organization_id: organizationId
+      }
+    });
+
+    return !!binding;
   }
 
 }
