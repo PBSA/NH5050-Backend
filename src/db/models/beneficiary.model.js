@@ -1,6 +1,5 @@
 const Sequelize = require('sequelize');
 const {Model} = Sequelize;
-const organizationConstants = require('../../constants/organization');
 
 /**
  * @typedef {Class} BeneficiaryModel

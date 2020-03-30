@@ -1,8 +1,17 @@
+const RestError = require('../errors/rest.error');
+const ValidateError = require('../errors/validate.error');
+
 const RaffleRepository = require('../repositories/raffle.repository');
 const BundleRepository = require('../repositories/bundle.repository');
 const UserRepository = require('../repositories/user.repository');
 const PeerplaysRepository = require('../repositories/peerplays.repository');
-const ValidateError = require('../errors/validate.error');
+const SaleRepository = require('../repositories/sale.repository');
+const EntryRepository = require('../repositories/entry.repository');
+const TransactionRepository = require('../repositories/transaction.repository');
+const OrganizationRepository = require('../repositories/organization.repository');
+const saleConstants = require('../constants/sale');
+const transactionConstants = require('../constants/transaction');
+const MailService = require('../services/mail.service');
 const {Login} = require('peerplaysjs-lib');
 const config = require('config');
 const stripe = require('stripe')(config.stripe.secretKey);
@@ -14,6 +23,11 @@ export default class RaffleService {
     this.userRepository = new UserRepository();
     this.peerplaysRepository = new PeerplaysRepository(conns);
     this.bundleRepository = new BundleRepository();
+    this.saleRepository = new SaleRepository();
+    this.entryRepository = new EntryRepository();
+    this.transactionRepository = new TransactionRepository();
+    this.organizationRepository = new OrganizationRepository();
+    this.mailService = new MailService(conns);
 
     this.errors = {
       NOT_FOUND: 'Raffle not found',
@@ -90,7 +104,7 @@ export default class RaffleService {
       progressive_draw_percent: newRaffle.progressive_draw_percent,
       organization_percent: newRaffle.organization_percent,
       beneficiary_percent: newRaffle.beneficiary_percent,
-      peerplays_draw_id: lotteryResult.id
+      peerplays_draw_id: lotteryResult.trx.operation_results[0][1]
     });
 
     return Raffle.getPublic();
@@ -141,8 +155,18 @@ export default class RaffleService {
     switch (event.type) {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
-        console.log('PaymentIntent was successful!')
-        //TODO: purchase tickets on blockchain, if not already purchased for this payemnt_intent and send email
+        const SaleExists = await this.saleRepository.findSaleByStripePaymentId(paymentIntent.id);
+        if(SaleExists.length > 0 && SaleExists.payment_status !== saleConstants.paymentStatus.success) {
+          this.processPurchase(SaleExists[0].get({plain: true}));
+        }
+        break;
+      case 'payment_intent.canceled':
+        const paymentId = event.data.object.id;
+        const CancelSaleExists = await this.saleRepository.findSaleByStripePaymentId(paymentId);
+        if(CancelSaleExists.length > 0) {
+          CancelSaleExists[0].payment_status = saleConstants.paymentStatus.cancel;
+          CancelSaleExists[0].save();
+        }
         break;
       default:
         // Unexpected event type
@@ -171,5 +195,170 @@ export default class RaffleService {
     raffle.image_url = imageUrl;
     await raffle.save();
     return raffle.getPublic();
+  }
+
+  async initStripeTicketPurchase(sale) {
+    return await this.saleRepository.model.create({
+      ...sale
+    });
+  }
+
+  async ticketPurchase(sale) {
+    if(sale.payment_type == saleConstants.paymentType.stripe) {
+      const SaleExists = await this.saleRepository.findSaleByStripePaymentId(sale.stripe_payment_id,{
+        include: [{
+          model: this.userRepository.model,
+          as: 'player'
+        },{
+          model: this.bundleRepository.model,
+          as: 'ticket_bundle'
+        },{
+          model: this.organizationRepository.model,
+          as: 'beneficiary'
+        },{
+          model: this.userRepository.model,
+          as: 'seller'
+        }]
+      });
+
+      if(SaleExists.length > 0 && SaleExists[0].payment_status === saleConstants.paymentStatus.success) {
+        const Entries = await this.entryRepository.findAll({
+          where: {
+            ticket_sales_id: SaleExists[0].id
+          }
+        });
+
+        if(Entries) {
+          return {
+            entries: this.getEntriesArray(Entries),
+            ticket_sales: {
+              ...SaleExists[0].get({plain: true}),
+              player: SaleExists[0].player.getPublic(),
+              ticket_bundle: SaleExists[0].ticket_bundle.getPublic(),
+              beneficiary: SaleExists[0].beneficiary.getPublic(),
+              seller: SaleExists[0].seller.getPublic()
+            }
+          };
+        }
+      }
+
+      let paymentIntent;
+
+      try{
+        paymentIntent = await stripe.paymentIntents.retrieve(sale.stripe_payment_id);
+      }catch(err) {
+        throw new RestError(err.message, 404);
+      }
+
+      if(paymentIntent.status === 'canceled') {
+        SaleExists[0].payment_status = saleConstants.paymentStatus.cancel;
+        await SaleExists[0].save();
+
+        throw new RestError('Payment canceled', 404);
+      }
+
+      if(paymentIntent.status !== 'succeeded') {
+        throw new RestError('Processing payment. You can close this window. We will send you an email once the payment has been processed.', 404);
+      }
+    }
+
+    return await this.processPurchase(sale);
+  }
+
+  async processPurchase(sale) {
+    const Sale = await this.saleRepository.model.upsert({
+      ...sale,
+      payment_status: saleConstants.paymentStatus.success
+    },{ returning: true });
+
+    const bundle = await this.bundleRepository.findByPk(sale.ticketbundle_id, {
+      include: [{
+        model: this.raffleRepository.model
+      }]
+    });
+
+    const player = await this.userRepository.findByPk(sale.player_id);
+
+    if(!player.peerplays_account_name || !player.peerplays_master_password) {
+      throw new Error(this.errors.PEERPLAYS_ACCOUNT_MISSING);
+    }
+
+    await this.transferfromPaymentToPlayer(bundle.price, player.peerplays_account_id, sale.payment_type);
+
+    const normalRaffleResult = await this.peerplaysRepository.purchaseTicket(bundle.raffle.peerplays_draw_id, bundle.quantity);
+
+    await this.transferFromPlayerToEscrow(bundle.price, bundle.raffle_id, player.peerplays_account_id, player.peerplays_account_name, player.peerplays_master_password);
+
+    let progressiveRaffleResult;
+
+    if(bundle.raffle.progressive_draw_id) {
+      const progressiveRaffle = await this.raffleRepository.findByPk(bundle.raffle.progressive_draw_id);
+      progressiveRaffleResult = await this.peerplaysRepository.purchaseTicket(progressiveRaffle.peerplays_draw_id, bundle.quantity);
+    }
+
+    let Entries = [];
+
+    for(let i = 0; i < bundle.quantity; i++) {
+      let entry = await this.entryRepository.model.create({
+        ticket_sales_id: Sale[0].id,
+        peerplays_raffle_ticket_id: normalRaffleResult.id,
+        peerplays_progressive_ticket_id: progressiveRaffleResult.id
+      });
+      Entries.push(entry);
+    }
+
+    await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.raffle.raffle_name, bundle.raffle_id);
+
+    const beneficiary = await this.organizationRepository.findByPk(Sale[0].beneficiary_id);
+
+    return {
+      entries: this.getEntriesArray(Entries),
+      ticket_sales: {
+        ...Sale[0].get({plain: true}),
+        player: player.getPublic(),
+        ticket_bundle: bundle.getPublic(),
+        beneficiary: beneficiary.getPublic()
+      }
+    };
+  }
+
+  getEntriesArray(Entries) {
+    let entries = [];
+    Entries.forEach((entry)=> entries.push({id:entry.id}));
+    return entries;
+  }
+
+  async transferfromPaymentToPlayer(amount, accountId, paymentType) {
+    const result = await this.peerplaysRepository.sendPPYFromPaymentAccount(accountId, amount);
+    await this.transactionRepository.model.create({
+      transfer_from: result.trx.operations[0][1].from,
+      transfer_to: result.trx.operations[0][1].to,
+      peerplays_block_num: result.block_num,
+      peerplays_transaction_ref: result.trx_num,
+      amount,
+      transaction_type: paymentType === saleConstants.paymentType.cash ?
+        transactionConstants.transactionType.cashBuy :
+        transactionConstants.transactionType.stripeBuy
+    });
+  }
+
+  async transferFromPlayerToEscrow(amount, raffleId, playerId, playerAccountName, playerMasterPassword) {
+    const keys = Login.generateKeys(
+      playerAccountName,
+      playerMasterPassword,
+      ['active'],
+      IS_PRODUCTION ? 'PPY' : 'TEST'
+    );
+
+    const result = await this.peerplaysRepository.sendPPY(config.peerplays.paymentReceiver, amount, playerId, keys.privKeys.active);
+    await this.transactionRepository.model.create({
+      transfer_from: result.trx.operations[0][1].from,
+      transfer_to: result.trx.operations[0][1].to,
+      raffle_id: raffleId,
+      peerplays_block_num: result.block_num,
+      peerplays_transaction_ref: result.trx_num,
+      amount,
+      transaction_type: transactionConstants.transactionType.ticketPurchase
+    });
   }
 }

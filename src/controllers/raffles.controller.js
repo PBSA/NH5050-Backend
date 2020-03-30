@@ -287,6 +287,74 @@ export default class RafflesController {
       [
         'post', '/api/v1/stripewebhook',
         this.stripePaymentWebhook.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /raffles/initpurchase:
+       *  post:
+       *    tags:
+       *    - developer
+       *    - raffles
+       *     summary: initiate stripe ticket purchase for the raffle
+       *     operationId: initStripeTicketPurchase
+       *     description: Start buying a ticket for the raffle using stripe
+       *     consumes:
+       *     - application/json
+       *     produces:
+       *     - application/json
+       *     parameters:
+       *     - in: body
+       *       name: raffle
+       *       description: ticket sale object with details of ticket to be purchased
+       *       schema:
+       *         $ref: '#/definitions/TicketSale'
+       *     responses:
+       *       200:
+       *         description: ticket purchase started
+       *         schema:
+       *           $ref: '#/definitions/TicketSalePublic'
+       *       400:
+       *         description: invalid input, object invalid
+       */
+      [
+        'post', '/api/v1/raffles/initpurchase',
+        this.raffleValidator.initStripeTicketPurchase,
+        this.initStripeTicketPurchase.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /raffles/ticketpurchase:
+       *  post:
+       *    tags:
+       *    - developer
+       *    - raffles
+       *     summary: complete ticket purchase for the raffle
+       *     operationId: ticketPurchase
+       *     description: Complete buying a ticket for the raffle
+       *     consumes:
+       *     - application/json
+       *     produces:
+       *     - application/json
+       *     parameters:
+       *     - in: body
+       *       name: raffle
+       *       description: ticket sale object with details of ticket to be purchased
+       *       schema:
+       *         $ref: '#/definitions/TicketSale'
+       *     responses:
+       *       200:
+       *         description: ticket purchase completed
+       *         schema:
+       *           $ref: '#/definitions/EntriesPublic'
+       *       400:
+       *         description: invalid input, object invalid
+       */
+      [
+        'post', '/api/v1/raffles/ticketpurchase',
+        this.raffleValidator.ticketPurchase,
+        this.ticketPurchase.bind(this)
       ]
     ];
   }
@@ -342,5 +410,13 @@ export default class RafflesController {
   async uploadImage(user, data, req, res) {
     const url = await this.fileService.saveImage(req, res);
     return await this.raffleService.setImageUrl(user.organization_id, url);
+  }
+
+  async initStripeTicketPurchase(user, body) {
+    return this.raffleService.initStripeTicketPurchase(body);
+  }
+
+  async ticketPurchase(user, body) {
+    return this.raffleService.ticketPurchase(body);
   }
 }

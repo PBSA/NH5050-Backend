@@ -2,6 +2,10 @@ import { Op } from 'sequelize';
 
 import { model } from '../db/models/user.model';
 import BasePostgresRepository from './abstracts/base-postgres.repository';
+import bcrypt from 'bcrypt';
+
+const profileConstants = require('../constants/profile');
+
 
 class UserRepository extends BasePostgresRepository {
 
@@ -39,6 +43,22 @@ class UserRepository extends BasePostgresRepository {
     return this.model.findOne({
       where: {email}
     });
+  }
+
+  async matchSellerPassword(organization_id, password) {
+    const Sellers = await this.model.findAll({
+      where: {
+        [Op.and]: [{organization_id}, {user_type:profileConstants.userType.seller}, {status: profileConstants.status.active}]
+      }
+    });
+
+    for(let i = 0; i < Sellers.length; i++){
+      if(await bcrypt.compare(password,Sellers[i].password)) {
+        return Sellers[i];
+      }
+    }
+
+    return null;
   }
 
 }
