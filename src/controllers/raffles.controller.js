@@ -387,6 +387,39 @@ export default class RafflesController {
         'get','/api/v1/ticketSales/:raffleId',
         this.raffleValidator.getRaffleById,
         this.getTicketSales.bind(this)
+      ],
+      /**
+       * @swagger
+       * 
+       * /ticketdetails/{ticketId}:
+       *  get:
+       *    tags:
+       *    - admin
+       *    - raffles
+       *    summary: get ticket detail with entries
+       *    operationId: getTicketSaleDetails
+       *    description: get ticket detail with entries for the ticket with given id
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: path
+       *      name: ticketId
+       *      description: pass the id of the ticket 
+       *      required: true
+       *      type: string
+       *    responses:
+       *      200:
+       *        description: ticket details
+       *        schema:
+       *          $ref: '#/definitions/EntriesPublic'
+       *      400:
+       *        description: bad input parameter
+       */
+      [
+        'get','/api/v1/ticketdetails/:ticketId',
+        this.authValidator.loggedAdminOnly,
+        this.raffleValidator.getTicketDetails,
+        this.getTicketSaleDetails.bind(this)
       ]
     ];
   }
@@ -470,5 +503,9 @@ export default class RafflesController {
 
   async getTicketSales(user, raffleId) {
     return this.raffleService.getTicketSales(raffleId);
+  }
+
+  async getTicketSaleDetails(user, ticketId) {
+    return this.raffleService.getTicketSaleDetails(ticketId);
   }
 }

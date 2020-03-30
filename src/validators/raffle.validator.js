@@ -34,6 +34,7 @@ class RaffleValidator extends BaseValidator {
     this.initStripeTicketPurchase = this.initStripeTicketPurchase.bind(this);
     this.ticketPurchase = this.ticketPurchase.bind(this);
     this.checkSales = this.checkSales.bind(this);
+    this.getTicketDetails = this.getTicketDetails.bind(this);
   }
 
   getRaffleById() {
@@ -41,7 +42,17 @@ class RaffleValidator extends BaseValidator {
       raffleId: Joi.number().integer().required()
     };
 
-    return this.validate(querySchema, null, (req, query) => query.raffleId);
+    return this.validate(querySchema, null, async(req, query) => {
+      const raffleExists = await this.raffleRepository.findByPk(query.raffleId);
+
+      if(!raffleExists) {
+        throw new ValidateError(400, 'Validate error', {
+          raffleId: 'Raffle not found'
+        });
+      }
+
+      return query.raffleId;
+    });
   }
 
   getRafflesByOrganization() {
@@ -490,6 +501,24 @@ class RaffleValidator extends BaseValidator {
         beneficiary_id: 'Beneficiary not found'
       });
     }
+  }
+
+  getTicketDetails() {
+    const querySchema = {
+      ticketId: Joi.string().required()
+    };
+
+    return this.validate(querySchema, null, async(req, query) => {
+      const saleExists = await this.saleRepository.findByPk(query.ticketId);
+
+      if(!saleExists) {
+        throw new ValidateError(400, 'Validate error', {
+          ticketId: 'Ticket not found'
+        });
+      }
+
+      return query.ticketId;
+    });
   }
 }
 
