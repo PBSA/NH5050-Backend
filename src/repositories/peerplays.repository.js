@@ -65,7 +65,6 @@ class PeerplaysRepository {
       tr.add_signer(senderPKey, senderPKey.toPublicKey().toPublicKeyString());
       console.trace('serialized transaction:', JSON.stringify(tr.serialize(), null, 2));
       [result] = await tr.broadcast();
-      result.amount = amount;
     } catch (e) {
       console.error(e.message);
       throw e;
@@ -191,6 +190,34 @@ class PeerplaysRepository {
 
       await tr.set_required_fees();
       tr.add_signer(userPKey, userPKey.toPublicKey().toPublicKeyString());
+      console.trace('serialized transaction:', JSON.stringify(tr.serialize()));
+      [result] = await tr.broadcast();
+    } catch (e) {
+      console.error(e.message);
+      throw e;
+    }
+
+    return result;
+  }
+
+  async purchaseTicket(draw_id, quantity) {
+    const tr = new this.peerplaysConnection.TransactionBuilder();
+    let result;
+
+    try {
+      tr.add_type_operation('ticket_purchase',{
+          lottery: draw_id,
+          buyer: config.peerplays.paymentAccountID,
+          tickets_to_buy: quantity,
+          amount: {
+              amount: new BigNumber(config.peerplays.ticketPrice).toNumber() * quantity,
+              asset_id: config.peerplays.ticketAssetID
+          },
+          extensions: null
+      });
+
+      await tr.set_required_fees();
+      tr.add_signer(this.pKey, this.pKey.toPublicKey().toPublicKeyString());
       console.trace('serialized transaction:', JSON.stringify(tr.serialize()));
       [result] = await tr.broadcast();
     } catch (e) {
