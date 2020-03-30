@@ -6,6 +6,7 @@ const saleConstants = require('../constants/sale');
 const profileConstants = require('../constants/profile');
 const organizationConstants = require('../constants/organization');
 const organizationRepository = require('../repositories/organization.repository');
+const beneficiaryRepository = require('../repositories/beneficiary.repository').default;
 const raffleRepository = require('../repositories/raffle.repository');
 const bundleRepository = require('../repositories/bundle.repository');
 const userRepository = require('../repositories/user.repository');
@@ -22,6 +23,7 @@ class RaffleValidator extends BaseValidator {
     this.bundleRepository = new bundleRepository();
     this.userRepository = new userRepository();
     this.saleRepository = new saleRepository();
+    this.beneficiaryRepository = new beneficiaryRepository();
 
     this.getRaffleById = this.getRaffleById.bind(this);
     this.getRafflesByOrganization = this.getRafflesByOrganization.bind(this);
@@ -403,6 +405,8 @@ class RaffleValidator extends BaseValidator {
             seller_password: 'Seller not found or inactive. Please contact your admin.'
           });
         }
+
+        body.seller_id = sellerExists.id;
       }
 
       if(payment_type === saleConstants.paymentType.stripe) {
@@ -479,9 +483,9 @@ class RaffleValidator extends BaseValidator {
       });
     }
 
-    const beneficiaryExists = await this.organizationRepository.findByPk(beneficiary_id);
+    const beneficiaryExists = await this.beneficiaryRepository.findByPk(beneficiary_id);
 
-    if(!beneficiaryExists || beneficiaryExists.type !== organizationConstants.organizationType.beneficiary) {
+    if(!beneficiaryExists) {
       throw new ValidateError(400, 'Validate error', {
         beneficiary_id: 'Beneficiary not found'
       });
