@@ -31,6 +31,7 @@ class RaffleValidator extends BaseValidator {
     this.createPayment = this.createPayment.bind(this);
     this.initStripeTicketPurchase = this.initStripeTicketPurchase.bind(this);
     this.ticketPurchase = this.ticketPurchase.bind(this);
+    this.checkSales = this.checkSales.bind(this);
   }
 
   getRaffleById() {
@@ -351,67 +352,8 @@ class RaffleValidator extends BaseValidator {
 
     return this.validate(null, bodySchema, async(req, query, body) => {
       const {raffle_id, ticketbundle_id, total_price, player_id, beneficiary_id, stripe_payment_id} = body;
-      const raffleExists = await this.raffleRepository.findByPk(raffle_id);
 
-      if(!raffleExists) {
-        throw new ValidateError(400, 'Validate error', {
-          raffle_id: 'Raffle not found'
-        });
-      }
-
-      if(moment(raffleExists.start_datetime).diff(moment()) > 0) {
-        throw new ValidateError(400, 'Validate error', {
-          raffle_id: 'Raffle has not started yet'
-        });
-      }
-
-      if(moment(raffleExists.end_datetime).diff(moment()) < 0) {
-        throw new ValidateError(400, 'Validate error', {
-          raffle_id: 'Raffle has already ended'
-        });
-      }
-
-      if(raffleExists.draw_type === raffleConstants.drawType.progressive) {
-        throw new ValidateError(400, 'Validate error', {
-          raffle_id: 'Cannot buy ticket for a progressive draw'
-        });
-      }
-
-      const bundleExists = await this.bundleRepository.findByPk(ticketbundle_id);
-
-      if(!bundleExists) {
-        throw new ValidateError(400, 'Validate error', {
-          ticketbundle_id: 'Ticket bundle not found'
-        });
-      }
-
-      if(bundleExists.raffle_id !== raffle_id) {
-        throw new ValidateError(400, 'Validate error', {
-          ticketbundle_id: 'Bundle does not belong to this raffle'
-        });
-      }
-
-      if(bundleExists.price !== total_price) {
-        throw new ValidateError(400, 'Validate error', {
-          total_price: 'Total price does not match the bundle price'
-        });
-      }
-
-      const playerExists = await this.userRepository.findByPk(player_id);
-
-      if(!playerExists || playerExists.user_type !== profileConstants.userType.player || playerExists.status !== profileConstants.status.active) {
-        throw new ValidateError(400, 'Validate error', {
-          player_id: 'Player not found or inactive'
-        });
-      }
-
-      const beneficiaryExists = await this.organizationRepository.findByPk(beneficiary_id);
-
-      if(!beneficiaryExists || beneficiaryExists.type !== organizationConstants.organizationType.beneficiary) {
-        throw new ValidateError(400, 'Validate error', {
-          beneficiary_id: 'Beneficiary not found'
-        });
-      }
+      await this.checkSales(raffle_id, ticketbundle_id, total_price, player_id, beneficiary_id);
 
       if(!body.hasOwnProperty('stripe_payment_id')) {
         throw new ValidateError(400, 'Validate error', {
@@ -445,66 +387,7 @@ class RaffleValidator extends BaseValidator {
     return this.validate(null, bodySchema, async(req, query, body) => {
       const {raffle_id, ticketbundle_id, total_price, player_id, beneficiary_id, payment_type, seller_password} = body;
       const raffleExists = await this.raffleRepository.findByPk(raffle_id);
-
-      if(!raffleExists) {
-        throw new ValidateError(400, 'Validate error', {
-          raffle_id: 'Raffle not found'
-        });
-      }
-
-      if(moment(raffleExists.start_datetime).diff(moment()) > 0) {
-        throw new ValidateError(400, 'Validate error', {
-          raffle_id: 'Raffle has not started yet'
-        });
-      }
-
-      if(moment(raffleExists.end_datetime).diff(moment()) < 0) {
-        throw new ValidateError(400, 'Validate error', {
-          raffle_id: 'Raffle has already ended'
-        });
-      }
-
-      if(raffleExists.draw_type === raffleConstants.drawType.progressive) {
-        throw new ValidateError(400, 'Validate error', {
-          raffle_id: 'Cannot buy ticket for a progressive draw'
-        });
-      }
-
-      const bundleExists = await this.bundleRepository.findByPk(ticketbundle_id);
-
-      if(!bundleExists) {
-        throw new ValidateError(400, 'Validate error', {
-          ticketbundle_id: 'Ticket bundle not found'
-        });
-      }
-
-      if(bundleExists.raffle_id !== raffle_id) {
-        throw new ValidateError(400, 'Validate error', {
-          ticketbundle_id: 'Bundle does not belong to this raffle'
-        });
-      }
-
-      if(bundleExists.price !== total_price) {
-        throw new ValidateError(400, 'Validate error', {
-          total_price: 'Total price does not match the bundle price'
-        });
-      }
-
-      const playerExists = await this.userRepository.findByPk(player_id);
-
-      if(!playerExists || playerExists.user_type !== profileConstants.userType.player || playerExists.status !== profileConstants.status.active) {
-        throw new ValidateError(400, 'Validate error', {
-          player_id: 'Player not found or inactive'
-        });
-      }
-
-      const beneficiaryExists = await this.organizationRepository.findByPk(beneficiary_id);
-
-      if(!beneficiaryExists || beneficiaryExists.type !== organizationConstants.organizationType.beneficiary) {
-        throw new ValidateError(400, 'Validate error', {
-          beneficiary_id: 'Beneficiary not found'
-        });
-      }
+      await this.checkSales(raffle_id, ticketbundle_id, total_price, player_id, beneficiary_id);
 
       if(payment_type === saleConstants.paymentType.cash && !body.hasOwnProperty('seller_password')) {
         throw new ValidateError(400, 'Validate error', {
@@ -539,6 +422,70 @@ class RaffleValidator extends BaseValidator {
 
       return body;
     });
+  }
+
+  async checkSales(raffle_id, ticketbundle_id, total_price, player_id, beneficiary_id) {
+    const raffleExists = await this.raffleRepository.findByPk(raffle_id);
+
+    if(!raffleExists) {
+      throw new ValidateError(400, 'Validate error', {
+        raffle_id: 'Raffle not found'
+      });
+    }
+
+    if(moment(raffleExists.start_datetime).diff(moment()) > 0) {
+      throw new ValidateError(400, 'Validate error', {
+        raffle_id: 'Raffle has not started yet'
+      });
+    }
+
+    if(moment(raffleExists.end_datetime).diff(moment()) < 0) {
+      throw new ValidateError(400, 'Validate error', {
+        raffle_id: 'Raffle has already ended'
+      });
+    }
+
+    if(raffleExists.draw_type === raffleConstants.drawType.progressive) {
+      throw new ValidateError(400, 'Validate error', {
+        raffle_id: 'Cannot buy ticket for a progressive draw'
+      });
+    }
+
+    const bundleExists = await this.bundleRepository.findByPk(ticketbundle_id);
+
+    if(!bundleExists) {
+      throw new ValidateError(400, 'Validate error', {
+        ticketbundle_id: 'Ticket bundle not found'
+      });
+    }
+
+    if(bundleExists.raffle_id !== raffle_id) {
+      throw new ValidateError(400, 'Validate error', {
+        ticketbundle_id: 'Bundle does not belong to this raffle'
+      });
+    }
+
+    if(bundleExists.price !== total_price) {
+      throw new ValidateError(400, 'Validate error', {
+        total_price: 'Total price does not match the bundle price'
+      });
+    }
+
+    const playerExists = await this.userRepository.findByPk(player_id);
+
+    if(!playerExists || playerExists.user_type !== profileConstants.userType.player || playerExists.status !== profileConstants.status.active) {
+      throw new ValidateError(400, 'Validate error', {
+        player_id: 'Player not found or inactive'
+      });
+    }
+
+    const beneficiaryExists = await this.organizationRepository.findByPk(beneficiary_id);
+
+    if(!beneficiaryExists || beneficiaryExists.type !== organizationConstants.organizationType.beneficiary) {
+      throw new ValidateError(400, 'Validate error', {
+        beneficiary_id: 'Beneficiary not found'
+      });
+    }
   }
 }
 
