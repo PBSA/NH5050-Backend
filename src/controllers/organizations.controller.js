@@ -236,7 +236,7 @@ export default class OrganizationsController {
       /**
        * @swagger
        *
-       * /organization/seller:
+       * /organization/sellers:
        *  get:
        *    tags:
        *    - developers
@@ -279,14 +279,14 @@ export default class OrganizationsController {
        *              example: organization not found
        */
       [
-        'get', '/api/v1/organization/seller',
+        'get', '/api/v1/organization/sellers',
         this.organizationValidator.validateOrganizationId,
         this.getSellers.bind(this)
       ],
       /**
        * @swagger
        *
-       * /organization/seller:
+       * /organization/sellers:
        *  post:
        *    tags:
        *    - admins
@@ -317,7 +317,7 @@ export default class OrganizationsController {
        *        description: invalid input, object invalid
        */
       [
-        'post', '/api/v1/organization/seller',
+        'post', '/api/v1/organization/sellers',
         this.authValidator.loggedAdminOnly,
         this.authValidator.validatePlayerSignUp,
         this.createOrUpdateSeller.bind(this)
@@ -406,7 +406,7 @@ export default class OrganizationsController {
        *        description: invalid input, object invalid
        */
       [
-        'post', '/api/v1/organization/admin',
+        'post', '/api/v1/organization/admins',
         this.authValidator.loggedAdminOnly,
         this.authValidator.validatePlayerSignUp,
         this.createOrUpdateAdmin.bind(this)
@@ -439,7 +439,7 @@ export default class OrganizationsController {
        *        description: invalid input, object invalid
        */
       [
-        'delete', '/api/v1/organization/admin',
+        'delete', '/api/v1/organization/admins',
         this.authValidator.loggedAdminOnly,
         this.deleteAdmin.bind(this)
       ]
