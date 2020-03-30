@@ -132,8 +132,8 @@ module.exports = {
   },
   associate(models) {
     SaleModel.belongsTo(models.Raffle.model, {foreignKey : 'raffle_id', targetKey: 'id'});
-    SaleModel.belongsTo(models.User.model, {foreignKey : 'player_id', targetKey: 'id'});
-    SaleModel.belongsTo(models.User.model, {foreignKey : 'seller_id', targetKey: 'id'});
+    SaleModel.belongsTo(models.User.model, {foreignKey : 'player_id', targetKey: 'id', as: 'player'});
+    SaleModel.belongsTo(models.User.model, {foreignKey : 'seller_id', targetKey: 'id', as: 'seller'});
     SaleModel.belongsTo(models.Bundle.model, {foreignKey : 'ticketbundle_id', targetKey: 'id'});
     SaleModel.belongsTo(models.Beneficiary.model, {foreignKey : 'beneficiary_id', targetKey: 'id'});
   },

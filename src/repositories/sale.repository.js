@@ -1,6 +1,8 @@
+import { Op } from 'sequelize';
+
 import { model } from '../db/models/sale.model';
 import BasePostgresRepository from './abstracts/base-postgres.repository';
-import saleConstants from '../constants/sale';
+const saleConstants = require('../constants/sale');
 
 class SaleRepository extends BasePostgresRepository {
 
@@ -12,11 +14,14 @@ class SaleRepository extends BasePostgresRepository {
     return this.model.findAll();
   }
 
-  async findSuccessSales() {
+  async findSuccessSales(raffle_id, options) {
     return this.model.findAll({
       where: {
-        payment_status: saleConstants.paymentStatus.success
-      }
+        [Op.and]: [
+        {raffle_id},
+        {payment_status: saleConstants.paymentStatus.success}]
+      },
+      include: options.include
     });
   }
 

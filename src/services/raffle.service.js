@@ -9,6 +9,7 @@ const SaleRepository = require('../repositories/sale.repository');
 const EntryRepository = require('../repositories/entry.repository');
 const TransactionRepository = require('../repositories/transaction.repository');
 const OrganizationRepository = require('../repositories/organization.repository');
+const BeneficiaryRepository = require('../repositories/beneficiary.repository').default;
 const saleConstants = require('../constants/sale');
 const transactionConstants = require('../constants/transaction');
 const MailService = require('../services/mail.service');
@@ -27,6 +28,7 @@ export default class RaffleService {
     this.entryRepository = new EntryRepository();
     this.transactionRepository = new TransactionRepository();
     this.organizationRepository = new OrganizationRepository();
+    this.beneficiaryRepository = new BeneficiaryRepository();
     this.mailService = new MailService(conns);
 
     this.errors = {
@@ -283,17 +285,56 @@ export default class RaffleService {
       throw new Error(this.errors.PEERPLAYS_ACCOUNT_MISSING);
     }
 
-    await this.transferfromPaymentToPlayer(bundle.price, player.peerplays_account_id, sale.payment_type);
+    try{
+      await this.transferfromPaymentToPlayer(bundle.price, player.peerplays_account_id, sale.payment_type);
+    } catch(e) {
+      console.error(e);
+      if (e.message.includes('insufficient')) {
+        throw new Error(this.errors.INSUFFICIENT_BALANCE);
+      }
 
-    const normalRaffleResult = await this.peerplaysRepository.purchaseTicket(bundle.raffle.peerplays_draw_id, bundle.quantity);
+      throw e;
+    }
 
-    await this.transferFromPlayerToEscrow(bundle.price, bundle.raffle_id, player.peerplays_account_id, player.peerplays_account_name, player.peerplays_master_password);
+    let normalRaffleResult;
+
+    try{
+      normalRaffleResult = await this.peerplaysRepository.purchaseTicket(bundle.raffle.peerplays_draw_id, bundle.quantity);
+    }catch(e) {
+      console.error(e);
+      if (e.message.includes('insufficient')) {
+        throw new Error(this.errors.INSUFFICIENT_BALANCE);
+      }
+
+      throw e;
+    }
+
+    try{
+      await this.transferFromPlayerToEscrow(bundle.price, bundle.raffle_id, player.peerplays_account_id, player.peerplays_account_name, player.peerplays_master_password);
+    } catch(e) {
+      console.error(e);
+      if (e.message.includes('insufficient')) {
+        throw new Error(this.errors.INSUFFICIENT_BALANCE);
+      }
+
+      throw e;
+    }
 
     let progressiveRaffleResult;
 
     if(bundle.raffle.progressive_draw_id) {
       const progressiveRaffle = await this.raffleRepository.findByPk(bundle.raffle.progressive_draw_id);
-      progressiveRaffleResult = await this.peerplaysRepository.purchaseTicket(progressiveRaffle.peerplays_draw_id, bundle.quantity);
+
+      try{
+        progressiveRaffleResult = await this.peerplaysRepository.purchaseTicket(progressiveRaffle.peerplays_draw_id, bundle.quantity);
+      }catch(e) {
+        console.error(e);
+        if (e.message.includes('insufficient')) {
+          throw new Error(this.errors.INSUFFICIENT_BALANCE);
+        }
+
+        throw e;
+      }
     }
 
     let Entries = [];
@@ -359,6 +400,41 @@ export default class RaffleService {
       peerplays_transaction_ref: result.trx_num,
       amount,
       transaction_type: transactionConstants.transactionType.ticketPurchase
+    });
+  }
+
+  async getTicketSales(raffle_id) {
+    const sales = await this.saleRepository.findSuccessSales(raffle_id,{
+      include: [{
+        model: this.userRepository.model,
+        as: 'player'
+      }, {
+        model: this.bundleRepository.model,
+        as: 'bundle'
+      }, {
+        model: this.beneficiaryRepository.model,
+        as: 'beneficiary',
+        include: [{
+          model: this.organizationRepository.model,
+          as: 'user'
+        }]
+      }, {
+        model: this.userRepository.model,
+        as: 'seller'
+      }]
+    });
+
+    return sales.map((sale) => {
+      return {
+        ...sale.get({plain: true}),
+        player: sale.player.getPublic(),
+        bundle: sale.bundle.getPublic(),
+        beneficiary: {
+          ...sale.beneficiary.get({plain: true}),
+          user: sale.beneficiary.user.getPublic()
+        },
+        seller: sale.seller ? sale.seller.getPublic() : null
+      };
     });
   }
 }

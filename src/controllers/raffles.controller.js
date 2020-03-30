@@ -355,6 +355,38 @@ export default class RafflesController {
         'post', '/api/v1/raffles/ticketpurchase',
         this.raffleValidator.ticketPurchase,
         this.ticketPurchase.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /ticketsales/{raffleId}:
+       *  get:
+       *    tags:
+       *    - developers
+       *    - raffles
+       *    summary: get all tickets sold for a raffle
+       *    operationId: getTicketSales
+       *    description: get all tickets sold for the raffle with given id
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: path
+       *      name: raffleId
+       *      description: pass the id of the raffle 
+       *      required: true
+       *      type: integer
+       *    responses:
+       *      200:
+       *        description: all ticket sales
+       *        schema:
+       *          $ref: '#/definitions/TicketSalesPublic'
+       *      400:
+       *        description: bad input parameter
+       */
+      [
+        'get','/api/v1/ticketSales/:raffleId',
+        this.raffleValidator.getRaffleById,
+        this.getTicketSales.bind(this)
       ]
     ];
   }
@@ -380,7 +412,15 @@ export default class RafflesController {
   }
 
   async addRaffle(user, data) {
-    return await this.raffleService.addRaffle(user, data);
+    try{
+      return await this.raffleService.addRaffle(user, data);
+    } catch(e) {
+      if (e.message === this.raffleService.errors.INSUFFICIENT_BALANCE || e.message === this.raffleService.errors.PEERPLAYS_ACCOUNT_MISSING) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
   }
 
   async addBundle(user, data) {
@@ -417,6 +457,18 @@ export default class RafflesController {
   }
 
   async ticketPurchase(user, body) {
-    return this.raffleService.ticketPurchase(body);
+    try{
+      return await this.raffleService.ticketPurchase(body);
+    } catch(e) {
+      if (e.message === this.raffleService.errors.INSUFFICIENT_BALANCE || e.message === this.raffleService.errors.PEERPLAYS_ACCOUNT_MISSING) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
+  }
+
+  async getTicketSales(user, raffleId) {
+    return this.raffleService.getTicketSales(raffleId);
   }
 }
