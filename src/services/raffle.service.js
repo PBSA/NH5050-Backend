@@ -157,7 +157,7 @@ export default class RaffleService {
         const paymentIntent = event.data.object;
         const SaleExists = await this.saleRepository.findSaleByStripePaymentId(paymentIntent.id);
         if(SaleExists.length > 0 && SaleExists.payment_status !== saleConstants.paymentStatus.success) {
-          this.processPurchase(SaleExists[0].get({plain: true}));
+          await this.processPurchase(SaleExists[0].get({plain: true}));
         }
         break;
       case 'payment_intent.canceled':
@@ -165,7 +165,7 @@ export default class RaffleService {
         const CancelSaleExists = await this.saleRepository.findSaleByStripePaymentId(paymentId);
         if(CancelSaleExists.length > 0) {
           CancelSaleExists[0].payment_status = saleConstants.paymentStatus.cancel;
-          CancelSaleExists[0].save();
+          await CancelSaleExists[0].save();
         }
         break;
       default:
