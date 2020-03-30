@@ -64,7 +64,7 @@ export default class OrganizationsController {
        */
       [
         'get', '/api/v1/organization',
-        this.organizationValidator.getOrganization,
+        this.organizationValidator.validateOrganizationId,
         this.getOrganization.bind(this)
       ],
       /**
@@ -191,7 +191,7 @@ export default class OrganizationsController {
        */
       [
         'get', '/api/v1/organization/beneficiary',
-        this.organizationValidator.getBeneficiaries,
+        this.organizationValidator.validateOrganizationId,
         this.getBeneficiaries.bind(this)
       ],
       /**
@@ -233,6 +233,216 @@ export default class OrganizationsController {
         this.organizationValidator.validateOrganization,
         this.createOrUpdateBeneficiary.bind(this)
       ],
+      /**
+       * @swagger
+       *
+       * /organization/sellers:
+       *  get:
+       *    tags:
+       *    - developers
+       *    - organization
+       *    summary: get sellers as per organization id
+       *    operationId: getSellers
+       *    description: returns all sellers for a given organization
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: query
+       *      name: organizationId
+       *      description: pass the id of the organization
+       *      required: true
+       *      type: string
+       *    responses:
+       *      200:
+       *        description: list of sellers
+       *        schema:
+       *          type: array
+       *          items:
+       *            $ref: '#/definitions/UserPublic'
+       *      400:
+       *        description: bad input parameter
+       *        schema:
+       *          $ref: '#/definitions/ValidateError'
+       *      401:
+       *        description: Error user unauthorized
+       *        schema:
+       *          $ref: '#/definitions/UnauthorizedError'
+       *      404:
+       *        description: Error organization not found
+       *        schema:
+       *          properties:
+       *            status:
+       *              type: number
+       *              example: 404
+       *            error:
+       *              type: string
+       *              example: organization not found
+       */
+      [
+        'get', '/api/v1/organization/sellers',
+        this.organizationValidator.validateOrganizationId,
+        this.getSellers.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /organization/sellers:
+       *  post:
+       *    tags:
+       *    - admins
+       *    - organization
+       *    summary: create or update a seller
+       *    operationId: addSeller
+       *    description: Creates or updates a seller in the database
+       *    consumes:
+       *    - application/json
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: body
+       *      name: seller
+       *      description: seller to add or update
+       *      schema:
+       *        $ref: '#/definitions/User'
+       *    responses:
+       *      200:
+       *        description: seller updated
+       *        schema:
+       *          $ref: '#/definitions/UserPublic'
+       *      201:
+       *        description: seller created
+       *        schema:
+       *          $ref: '#/definitions/UserPublic'
+       *      400:
+       *        description: invalid input, object invalid
+       */
+      [
+        'post', '/api/v1/organization/sellers',
+        this.authValidator.loggedAdminOnly,
+        this.authValidator.validatePlayerSignUp,
+        this.createOrUpdateSeller.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /organization/admins:
+       *  get:
+       *    tags:
+       *    - developers
+       *    - organization
+       *    summary: get admins as per organization id
+       *    operationId: getAdmins
+       *    description: returns all admins for a given organization
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: query
+       *      name: organizationId
+       *      description: pass the id of the organization
+       *      required: true
+       *      type: string
+       *    responses:
+       *      200:
+       *        description: list of admins
+       *        schema:
+       *          type: array
+       *          items:
+       *            $ref: '#/definitions/UserPublic'
+       *      400:
+       *        description: bad input parameter
+       *        schema:
+       *          $ref: '#/definitions/ValidateError'
+       *      401:
+       *        description: Error user unauthorized
+       *        schema:
+       *          $ref: '#/definitions/UnauthorizedError'
+       *      404:
+       *        description: Error organization not found
+       *        schema:
+       *          properties:
+       *            status:
+       *              type: number
+       *              example: 404
+       *            error:
+       *              type: string
+       *              example: organization not found
+       */
+      [
+        'get', '/api/v1/organization/admins',
+        this.organizationValidator.validateOrganizationId,
+        this.getAdmins.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /organization/admins:
+       *  post:
+       *    tags:
+       *    - admins
+       *    - organization
+       *    summary: create or update a admins
+       *    operationId: addAdmin
+       *    description: Creates or updates an admin in the database
+       *    consumes:
+       *    - application/json
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: body
+       *      name: admin
+       *      description: admin to add or update
+       *      schema:
+       *        $ref: '#/definitions/User'
+       *    responses:
+       *      200:
+       *        description: admin updated
+       *        schema:
+       *          $ref: '#/definitions/UserPublic'
+       *      201:
+       *        description: admin created
+       *        schema:
+       *          $ref: '#/definitions/UserPublic'
+       *      400:
+       *        description: invalid input, object invalid
+       */
+      [
+        'post', '/api/v1/organization/admins',
+        this.authValidator.loggedAdminOnly,
+        this.authValidator.validatePlayerSignUp,
+        this.createOrUpdateAdmin.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /organization/admins:
+       *  delete:
+       *    tags:
+       *    - admins
+       *    - organization
+       *    summary: delete admins
+       *    operationId: addAdmin
+       *    description: deletes an admin
+       *    consumes:
+       *    - application/json
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: query
+       *      name: userId
+       *      description: user to delete
+       *      schema:
+       *        $ref: '#/definitions/User'
+       *    responses:
+       *      200:
+       *        description: admin deleted
+       *      400:
+       *        description: invalid input, object invalid
+       */
+      [
+        'delete', '/api/v1/organization/admins',
+        this.authValidator.loggedAdminOnly,
+        this.deleteAdmin.bind(this)
+      ]
     ];
   }
 
@@ -273,15 +483,78 @@ export default class OrganizationsController {
   }
 
   async createOrUpdateBeneficiary(user, organizationData) {
-    try{
+    try {
       return await this.organizationService.createOrUpdateBeneficiary(user.organization_id, organizationData);
-    }catch(e) {
-      if (e.message === this.organizationService.errors.NOT_FOUND || e.message == this.organizationService.errors.INVALID_BENEFICIARY) {
+    } catch(e) {
+      if (e.message === this.organizationService.errors.NOT_FOUND) {
+        throw new RestError(e.message, 404);
+      } else if (e.message === this.organizationService.errors.INVALID_BENEFICIARY) {
+        throw new RestError(e.message, 400);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
+  }
+
+  async getSellers(user, organizationId) {
+    if (organizationId !== user.organization_id) {
+      throw new RestError(`User does not belong to organization "${organizationId}"`);
+    }
+
+    try {
+      return await this.organizationService.getSellers(organizationId);
+    } catch (e) {
+      if (e.message === this.organizationService.errors.NOT_FOUND) {
         throw new RestError(e.message, 404);
       } else {
         throw new RestError(e.message, 500);
       }
     }
+  }
+
+  async createOrUpdateSeller(user, sellerData) {
+    try {
+      return await this.organizationService.createOrUpdateSeller(user.organization_id, sellerData);
+    } catch(e) {
+      if (e.message === this.organizationService.errors.NOT_FOUND) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
+  }
+
+  async getAdmins(user, organizationId) {
+    const isBeneficiary = await this.organizationService.isBeneficiaryOf(user.organization_id, organizationId);
+    if (organizationId !== user.organization_id && !isBeneficiary) {
+      throw new RestError('unauthorized', 403);
+    }
+
+    try {
+      return await this.organizationService.getAdmins(organizationId);
+    } catch (e) {
+      if (e.message === this.organizationService.errors.NOT_FOUND) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
+  }
+
+  async createOrUpdateAdmin(user, adminData) {
+    try {
+      return await this.organizationService.createOrUpdateAdmin(user.organization_id, adminData);
+    } catch(e) {
+      if (e.message === this.organizationService.errors.NOT_FOUND) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
+  }
+
+  async deleteAdmin(user, adminId) {
+    return await this.organizationService.deleteAdmin(user.organization_id, adminId);
   }
 
   async uploadLogo(user, data, req, res) {
