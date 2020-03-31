@@ -524,7 +524,7 @@ export default class RafflesController {
   }
 
   async downloadReport(user, raffleId) {
-    const url = await this.raffleService.createRaffleReport(raffleId);
+    const url = await this.raffleService.createRaffleReport(raffleId, user);
     return {url};
   }
 

@@ -512,22 +512,19 @@ export default class RaffleService {
     };
   }
 
-  async createRaffleReport(raffleId) {
+  async createRaffleReport(raffleId, user) {
     const filename = `files/${randomBytes(16).toString('hex')}.csv`;
     const {stream, promise: uploadPromise} = this.fileService.createUploadStream(filename);
 
     if (!raffleId) {
-      const raffles = await this.raffleRepository.findAll();
-      for (const raffle of raffles) {
-        await this._createRaffleReport(raffle, stream);
-      }
+      await this._createRaffleReport(raffleId, user.organization_id, stream);
     } else {
       const raffle = await this.raffleRepository.findByPk(raffleId);
       if (!raffle) {
         throw new Error(this.errors.NOT_FOUND);
       }
 
-      await this._createRaffleReport(raffle, stream);
+      await this._createRaffleReport(raffleId, user.organization_id, stream);
     }
 
     stream.end();
@@ -536,27 +533,27 @@ export default class RaffleService {
     return `${CDN_URL}/${filename}`;
   }
 
-  async _createRaffleReport(raffle, stream) {
-    const organization = await this.organizationRepository.findByPk(raffle.organization_id);
+  async _createRaffleReport(raffle_id, organizationId, stream) {
+    const organization = await this.organizationRepository.findByPk(organizationId);
     if (!organization) {
       throw new Error(this.errors.NOT_FOUND);
     }
 
     const csvParser = new json2csv.Parser({
       fields: [
-        'organization',
-        'non_profit_id',
-        'raffle_id',
-        'raffle_type',
-        'draw_date',
-        'draw_location',
-        'ticket_value',
-        'ticket_id',
-        'entry_ids',
-        'player_id',
-        'player_name',
-        'player_mobile',
-        'player_email'
+        {label: 'Organization', value: 'organization'},
+        {label: 'Non Profit ID', value: 'non_profit_id'},
+        {label: 'Raffle ID', value: 'raffle_id'},
+        {label: 'Raffle Type', value: 'raffle_type'},
+        {label: 'Draw Date', value: 'draw_date'},
+        {label: 'Draw Location', value: 'draw_location'},
+        {label: 'Ticket Value', value: 'ticket_value'},
+        {label: 'Ticket ID', value: 'ticket_id'},
+        {label: 'Entry ID', value: 'entry_ids'},
+        {label: 'Player ID', value: 'player_id'},
+        {label: 'Player Name', value: 'player_name'},
+        {label: 'Player Mobile', value: 'player_mobile'},
+        {label: 'Player Email', value: 'player_email'}
       ]
     });
 
@@ -564,16 +561,25 @@ export default class RaffleService {
     let currentId = 0;
 
     while (true) {
-      let sales = await this.saleRepository.model.findAll({
-        where: {
-          id: {
-            [Op.gt]: currentId
-          },
-          raffle_id: raffle.id
+      const whereClause = raffle_id ? {
+        id: {
+          [Op.gt]: currentId
         },
+        raffle_id
+      }
+      : {
+        id: {
+          [Op.gt]: currentId
+        }
+      }
+
+      let sales = await this.saleRepository.model.findAll({
+        where: whereClause,
         include: [{
           model: this.userRepository.model,
           as: 'player'
+        },{
+          model: this.raffleRepository.model
         }],
         limit: fetchCount
       });
@@ -599,13 +605,13 @@ export default class RaffleService {
       sales = sales.map(sale => ({
         organization: organization.name,
         non_profit_id: organization.non_profit_id,
-        raffle_id: `R${padZeros(raffle.id, 2)}`,
-        raffle_type: raffle.draw_type,
-        draw_date: new Date(raffle.draw_datetime).toLocaleDateString(),
+        raffle_id: `R${padZeros(sale.raffle_id, 2)}`,
+        raffle_type: sale.raffle.draw_type,
+        draw_date: new Date(sale.raffle.draw_datetime).toLocaleDateString(),
         draw_location: `${organization.city}, ${organization.state}`,
         ticket_value: `$${sale.total_price.toFixed(2)}`,
-        ticket_id: `R${padZeros(raffle.id, 2)}T${padZeros(sale.id, 4)}`,
-        entry_ids: sale.entries.map(entry => `R${padZeros(raffle.id, 2)}T${padZeros(sale.id, 4)}E${padZeros(entry.id, 5)}`).join(','),
+        ticket_id: `R${padZeros(sale.raffle_id, 2)}T${padZeros(sale.id, 4)}`,
+        entry_ids: sale.entries.map(entry => `R${padZeros(sale.raffle_id, 2)}T${padZeros(sale.id, 4)}E${padZeros(entry.id, 5)}`).join(','),
         player_id: sale.player.id,
         player_name: `${sale.player.firstname} ${sale.player.lastname}`,
         player_mobile: sale.player.mobile,

@@ -35,6 +35,7 @@ class RaffleValidator extends BaseValidator {
     this.ticketPurchase = this.ticketPurchase.bind(this);
     this.checkSales = this.checkSales.bind(this);
     this.getTicketDetails = this.getTicketDetails.bind(this);
+    this.downloadReport = this.downloadReport.bind(this);
   }
 
   getRaffleById() {
