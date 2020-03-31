@@ -17,6 +17,7 @@ class PeerplaysConnection extends BaseConnection {
     super();
 
     this.dbAPI = null;
+    this.historyAPI = null;
     this.asset = null;
     this.apiInstance = null;
     this.reconnectAttempt = 0;
@@ -58,6 +59,7 @@ class PeerplaysConnection extends BaseConnection {
     this.apiInstance = apiInstance;
     this.dbAPI = this.apiInstance.db_api();
     this.networkAPI = this.apiInstance.network_api();
+    this.historyAPI = this.apiInstance.history_api();
     [this.asset] = await this.dbAPI.exec('get_assets', [[config.peerplays.sendAssetId]]);
     this.TransactionBuilder = TransactionBuilder;
     
@@ -103,6 +105,29 @@ class PeerplaysConnection extends BaseConnection {
         }
       });
     });
+  }
+
+  async getLotteryWinners() {
+    const res = await this.historyAPI.exec('get_account_history',['1.2.0','1.11.0',1,'1.11.0']);
+    let start = 0;
+    let end = res.length > 0 ? Number(res[0].id.split('.')[2]) : 0;
+    let winners = [];
+
+    while(start < end) {
+      let result = await this.historyAPI.exec('get_account_history',['1.2.0',`1.11.${start}`,100,`1.11.${start + 100}`]);
+
+      start += 100;
+
+      const wins = result.filter((history) => {
+        return history.op[0] === 79 && history.op[1].is_benefactor_reward === false;
+      });
+
+      if(wins.length > 0) {
+        winners.push(...wins);
+      }
+    }
+
+    return winners;
   }
 
   disconnect() {

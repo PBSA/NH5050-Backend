@@ -62,16 +62,58 @@ export default class RaffleService {
       throw new Error(this.errors.NOT_FOUND);
     }
 
-    return raffle.getPublic();
+    const amounts = await this.calculateAmounts(raffle);
+
+    return {
+      ...raffle.getPublic(),
+      ...amounts,
+      winner: raffle.user ? raffle.user.getPublic() : null
+    };
+  }
+
+  async calculateAmounts(raffle) {
+    const totalSales = await this.saleRepository.findTotalSuccessSalesForRaffle(raffle.id);
+
+    let totalProgressiveSales = 0;
+    const rafflesInProgressive = await this.raffleRepository.model.findAll({
+      where: {
+        progressive_draw_id: raffle.progressive_draw_id
+      }
+    });
+
+    for(let i = 0; i < rafflesInProgressive.length; i++) {
+      totalProgressiveSales += await this.saleRepository.findTotalSuccessSalesForRaffle(rafflesInProgressive[i].id);
+    }
+
+    const numBeneficiaries = await this.beneficiaryRepository.model.count({where: {
+      organization_id: raffle.organization_id
+    }});
+
+    return {
+      total_jackpot: (totalSales * raffle.raffle_draw_percent / 100).toFixed(2),
+      total_progressive_jackpot: (totalProgressiveSales * raffle.progressive_draw_percent / 100).toFixed(2),
+      each_beneficiary_amount: ((totalSales * raffle.beneficiary_percent / 100)/numBeneficiaries).toFixed(2),
+      organization_amount: (totalSales * raffle.organization_percent / 100).toFixed(2),
+      admin_fee_amount: (totalSales * raffle.admin_fees_percent / 100).toFixed(2),
+      donation_amount: (totalSales * raffle.donation_percent / 100).toFixed(2)
+    };
   }
 
   async getRafflesByOrganizationId(organizationId) {
-    return this.raffleRepository.findRafflesByOrganizationId(organizationId);
+    const raffles = await this.raffleRepository.findRafflesByOrganizationId(organizationId);
+
+    return Promise.all(raffles.map(async (raffle) => {
+      const amounts = await this.calculateAmounts(raffle);
+      return {
+        ...raffle.getPublic(),
+        ...amounts
+      };
+    }));
   }
 
   async addRaffle(user, newRaffle) {
     if(newRaffle.id) {
-      const raffleExists = await this.raffleRepository.findByPk(id);
+      const raffleExists = await this.raffleRepository.findByPk(newRaffle.id);
 
       Object.assign(raffleExists, newRaffle);
 
@@ -381,6 +423,8 @@ export default class RaffleService {
       }]
     });
 
+    const amounts = await this.calculateAmounts(bundle.raffle);
+
     return {
       entries: this.getEntriesArray(Entries),
       ticket_sales: {
@@ -390,7 +434,8 @@ export default class RaffleService {
         beneficiary: {
           ...beneficiary.get({plain: true}),
           user: beneficiary.user.getPublic()
-        }
+        },
+        ...amounts
       }
     };
   }
@@ -621,5 +666,50 @@ export default class RaffleService {
       const csvData = csvParser.parse(sales);
       stream.write(csvData);
     }
+  }
+
+  async resolveRaffles() {
+    const pendingRaffles = await this.raffleRepository.findPendingRaffles();
+    const winners = await this.peerplaysRepository.getWinners();
+
+    for(let i = 0; i < pendingRaffles.length; i++) {
+      const winner = winners.find((winner) => winner.op[1].lottery === pendingRaffles[i].peerplays_draw_id);
+
+      if(!winner) continue;
+
+      const user = await this.userRepository.findByPeerplaysID(winner.op[1].winner);
+      if(user) {
+        pendingRaffles[i].winner_id = user.id;
+
+        //We know the winner from the blockchain but the winning entry is not provided by the blockchain.
+        //So, create an array of entries of tickets purchased by the winner and choose the winning entry using Math.Random()
+        const userTickets = await this.saleRepository.model.findAll({
+          where: {
+            raffle_id: pendingRaffles[i].id,
+            player_id: user.id,
+            payment_status: saleConstants.paymentStatus.success
+          }
+        });
+
+        let userEntries = [];
+
+        for(let j = 0; j < userTickets.length; j++) {
+          const entries = await this.entryRepository.findAll({
+            where: {
+              ticket_sales_id: userTickets[j].id
+            }
+          });
+
+          userEntries.push(...entries);
+        }
+
+        const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+
+        pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
+        pendingRaffles[i].save();
+      }
+    }
+
+    return true;
   }
 }

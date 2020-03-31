@@ -240,6 +240,10 @@ class PeerplaysRepository {
 
     return result;
   }
+
+  async getWinners() {
+    return this.peerplaysConnection.getLotteryWinners();
+  }
 }
 
 module.exports = PeerplaysRepository;

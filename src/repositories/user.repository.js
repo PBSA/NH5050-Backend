@@ -61,6 +61,11 @@ class UserRepository extends BasePostgresRepository {
     return null;
   }
 
+  async findByPeerplaysID(peerplays_account_id) {
+    return this.model.findOne({
+      where: {peerplays_account_id}
+    });
+  }
 }
 
 module.exports = UserRepository;

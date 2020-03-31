@@ -458,6 +458,31 @@ export default class RafflesController {
         this.authValidator.loggedAdminOnly,
         this.raffleValidator.getTicketDetails,
         this.getTicketSaleDetails.bind(this)
+      ],
+      /**
+       * @swagger
+       * 
+       * /resolveRaffles:
+       *  get:
+       *    tags:
+       *    - admin
+       *    - raffles
+       *    summary: resolve pending raffles
+       *    operationId: resolveRaffles
+       *    description: get draw winner details from the blockchain and populate the winner_id
+       *    produces:
+       *    - application/json
+       *    responses:
+       *      200:
+       *        description: ticket details
+       *        type: boolean
+       *      400:
+       *        description: bad input parameter
+       */
+      [
+        'get','/api/v1/resolveRaffles',
+        this.authValidator.loggedAdminOnly,
+        this.resolveRaffles.bind(this)
       ]
     ];
   }
@@ -550,5 +575,9 @@ export default class RafflesController {
 
   async getTicketSaleDetails(user, ticketId) {
     return this.raffleService.getTicketSaleDetails(ticketId);
+  }
+
+  async resolveRaffles() {
+    return this.raffleService.resolveRaffles();
   }
 }

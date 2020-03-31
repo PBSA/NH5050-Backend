@@ -46,7 +46,7 @@ class UserService {
 
   signUp(req, newUser) {
     newUser.user_type = profileConstants.userType.player;
-    return this.createUser(newUser, req.connection.remoteAddress);
+    return this.createOrUpdateUser(newUser, req.connection.remoteAddress);
   }
 
   async createPeerplaysAccountForUser(user) {
@@ -73,12 +73,12 @@ class UserService {
     return user;
   }
 
-  createOrUpdateUser(userData) {
+  createOrUpdateUser(userData, remoteAddress) {
     if (userData.hasOwnProperty('id')) {
-      return this.updateUser(userData);
+      return this.updateUser(userData, remoteAddress);
     }
 
-    return this.createUser(userData);
+    return this.createUser(userData, remoteAddress);
   }
 
   async createUser(newUser, remoteAddress) {
@@ -88,6 +88,10 @@ class UserService {
 
     if(password) {
       hashedPassword = await bcrypt.hash(password, 10);
+    }
+
+    if(newUser.user_type === profileConstants.userType.player) {
+      organization_id = null;
     }
 
     const user = await this.userRepository.model.create({
@@ -113,7 +117,7 @@ class UserService {
     return this.getCleanUser(user);
   }
 
-  async updateUser(updatedUser) {
+  async updateUser(updatedUser, remoteAddress) {
     const user = await this.userRepository.findByPk(updatedUser.id);
     if (!user) {
       throw new Error(this.errors.NOT_FOUND);
@@ -139,6 +143,12 @@ class UserService {
     }
 
     user.is_email_allowed = updatedUser.is_email_allowed;
+
+    if(user.user_type !== profileConstants.userType.player) {
+      user.organization_id = updatedUser.organization_id;
+    }
+
+    user.ip_address = remoteAddress;
     await user.save();
 
     return this.getCleanUser(user);
