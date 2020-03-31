@@ -15,11 +15,22 @@ build:
       - /*
   tags:
     - docker
+
+swagger:
+  stage: swagger
+  dependencies:
+    - build
+  script:
+    - mkdir -p "/var/www/swagger/nh5050/$CI_COMMIT_REF_NAME/$CI_COMMIT_SHORT_SHA"
+    - cp docs/swagger.yaml "/var/www/swagger/nh5050/$CI_COMMIT_REF_NAME/$CI_COMMIT_SHORT_SHA"
+    - cp docs/swagger.yaml "/var/www/swagger/nh5050/$CI_COMMIT_REF_NAME"
+  tags:
+    - swagger
   
 deployToDev:
   stage: deploy
   script:
-    - cp -R ../NH5050-backend $PROJECT_DIR
+    - docker build . -t 5050-backend
     - deployBackend
   only:
     - develop
