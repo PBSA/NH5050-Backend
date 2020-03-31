@@ -296,10 +296,21 @@ export default class RaffleService {
       throw e;
     }
 
+    try{
+      await this.peerplaysRepository.sendPPYFromPaymentAccount(player.peerplays_account_id, bundle.quantity);
+    } catch(e) {
+      console.error(e);
+      if (e.message.includes('insufficient')) {
+        throw new Error(this.errors.INSUFFICIENT_BALANCE);
+      }
+
+      throw e;
+    }
+
     let normalRaffleResult;
 
     try{
-      normalRaffleResult = await this.peerplaysRepository.purchaseTicket(bundle.raffle.peerplays_draw_id, bundle.quantity);
+      normalRaffleResult = await this.peerplaysRepository.purchaseTicket(bundle.raffle.peerplays_draw_id, bundle.quantity, player);
     }catch(e) {
       console.error(e);
       if (e.message.includes('insufficient')) {
@@ -326,7 +337,7 @@ export default class RaffleService {
       const progressiveRaffle = await this.raffleRepository.findByPk(bundle.raffle.progressive_draw_id);
 
       try{
-        progressiveRaffleResult = await this.peerplaysRepository.purchaseTicket(progressiveRaffle.peerplays_draw_id, bundle.quantity);
+        progressiveRaffleResult = await this.peerplaysRepository.purchaseTicket(progressiveRaffle.peerplays_draw_id, bundle.quantity, player);
       }catch(e) {
         console.error(e);
         if (e.message.includes('insufficient')) {
@@ -378,7 +389,7 @@ export default class RaffleService {
   }
 
   async transferfromPaymentToPlayer(amount, accountId, paymentType) {
-    const result = await this.peerplaysRepository.sendPPYFromPaymentAccount(accountId, amount);
+    const result = await this.peerplaysRepository.sendUSDFromPaymentAccount(accountId, amount);
     await this.transactionRepository.model.create({
       transfer_from: result.trx.operations[0][1].from,
       transfer_to: result.trx.operations[0][1].to,
@@ -399,7 +410,7 @@ export default class RaffleService {
       IS_PRODUCTION ? 'PPY' : 'TEST'
     );
 
-    const result = await this.peerplaysRepository.sendPPY(config.peerplays.paymentReceiver, amount, playerId, keys.privKeys.active);
+    const result = await this.peerplaysRepository.sendPPY(config.peerplays.paymentReceiver, amount, playerId, keys.privKeys.active, config.peerplays.sendAssetId);
     await this.transactionRepository.model.create({
       transfer_from: result.trx.operations[0][1].from,
       transfer_to: result.trx.operations[0][1].to,

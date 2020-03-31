@@ -44,7 +44,7 @@ class PeerplaysRepository {
     }
   }
 
-  async sendPPY(accountId, amount, senderAccountId, senderPKey) {
+  async sendPPY(accountId, amount, senderAccountId, senderPKey, assetId) {
     amount = new BigNumber(amount).shiftedBy(this.peerplaysConnection.asset.precision).toNumber();
     const tr = new this.peerplaysConnection.TransactionBuilder();
     let result;
@@ -53,11 +53,11 @@ class PeerplaysRepository {
       tr.add_type_operation('transfer', {
         fee: {
           amount: 0,
-          asset_id: config.peerplays.sendAssetId
+          asset_id: assetId
         },
         from: senderAccountId,
         to: accountId,
-        amount: {amount, asset_id: config.peerplays.sendAssetId}
+        amount: {amount, asset_id: assetId}
       });
 
 
@@ -116,12 +116,16 @@ class PeerplaysRepository {
     return null;
   }
   
-  async sendPPYFromPaymentAccount(accountId, amount) {
-    return this.sendPPY(accountId, amount, config.peerplays.paymentAccountID, this.pKey);
+  async sendUSDFromPaymentAccount(accountId, amount) {
+    return this.sendPPY(accountId, amount, config.peerplays.paymentAccountID, this.pKey, config.peerplays.sendAssetId);
+  }
+
+  async sendPPYFromPaymentAccount(accountId, ticketsToBuy) {
+    return this.sendPPY(accountId, 2 * config.peerplays.ticketPrice * ticketsToBuy / Math.pow(10, this.peerplaysConnection.asset.precision), config.peerplays.paymentAccountID, this.pKey, config.peerplays.ticketAssetID);
   }
 
   async sendPPYFromReceiverAccount(accountId, amount) {
-    return this.sendPPY(accountId, amount, config.peerplays.paymentReceiver, this.receiverPKey);
+    return this.sendPPY(accountId, amount, config.peerplays.paymentReceiver, this.receiverPKey, config.peerplays.sendAssetId);
   }
 
   randomizeLottoName() {
@@ -200,14 +204,21 @@ class PeerplaysRepository {
     return result;
   }
 
-  async purchaseTicket(draw_id, quantity) {
+  async purchaseTicket(draw_id, quantity, player) {
     const tr = new this.peerplaysConnection.TransactionBuilder();
     let result;
+
+    const keys = Login.generateKeys(
+      player.peerplays_account_name,
+      player.peerplays_master_password,
+      ['active'],
+      IS_PRODUCTION ? 'PPY' : 'TEST'
+    );
 
     try {
       tr.add_type_operation('ticket_purchase',{
           lottery: draw_id,
-          buyer: config.peerplays.paymentAccountID,
+          buyer: player.peerplays_account_id,
           tickets_to_buy: quantity,
           amount: {
               amount: new BigNumber(config.peerplays.ticketPrice).toNumber() * quantity,
@@ -216,8 +227,10 @@ class PeerplaysRepository {
           extensions: null
       });
 
+      const pKey = keys.privKeys.active;
+
       await tr.set_required_fees();
-      tr.add_signer(this.pKey, this.pKey.toPublicKey().toPublicKeyString());
+      tr.add_signer(pKey, pKey.toPublicKey().toPublicKeyString());
       console.trace('serialized transaction:', JSON.stringify(tr.serialize()));
       [result] = await tr.broadcast();
     } catch (e) {
