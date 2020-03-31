@@ -1,5 +1,9 @@
-const RestError = require('../errors/rest.error');
-const ValidateError = require('../errors/validate.error');
+const {randomBytes} = require('crypto');
+const {Login} = require('peerplaysjs-lib');
+const config = require('config');
+const stripe = require('stripe')(config.stripe.secretKey);
+const {Op} = require('sequelize');
+const json2csv = require('json2csv');
 
 const RaffleRepository = require('../repositories/raffle.repository');
 const BundleRepository = require('../repositories/bundle.repository');
@@ -13,10 +17,18 @@ const BeneficiaryRepository = require('../repositories/beneficiary.repository').
 const saleConstants = require('../constants/sale');
 const transactionConstants = require('../constants/transaction');
 const MailService = require('../services/mail.service');
-const {Login} = require('peerplaysjs-lib');
-const config = require('config');
-const stripe = require('stripe')(config.stripe.secretKey);
+const FileService = require('../services/file.service').default;
+const RestError = require('../errors/rest.error');
+const ValidateError = require('../errors/validate.error');
+
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const CDN_URL = config.get('cdnUrl');
+
+function padZeros(num, totalDigitsRequired) {
+  var str = num + "";
+  while (str.length < totalDigitsRequired) str = "0" + str;
+  return str;
+}
 
 export default class RaffleService {
   constructor(conns) {
@@ -30,6 +42,7 @@ export default class RaffleService {
     this.organizationRepository = new OrganizationRepository();
     this.beneficiaryRepository = new BeneficiaryRepository();
     this.mailService = new MailService(conns);
+    this.fileService = new FileService(conns);
 
     this.errors = {
       NOT_FOUND: 'Raffle not found',
@@ -497,5 +510,116 @@ export default class RaffleService {
         seller: Sale.seller ? Sale.seller.getPublic() : null
       }
     };
+  }
+
+  async createRaffleReport(raffleId, user) {
+    const filename = `files/${randomBytes(16).toString('hex')}.csv`;
+    const {stream, promise: uploadPromise} = this.fileService.createUploadStream(filename);
+
+    if (!raffleId) {
+      await this._createRaffleReport(raffleId, user.organization_id, stream);
+    } else {
+      const raffle = await this.raffleRepository.findByPk(raffleId);
+      if (!raffle) {
+        throw new Error(this.errors.NOT_FOUND);
+      }
+
+      await this._createRaffleReport(raffleId, user.organization_id, stream);
+    }
+
+    stream.end();
+    await uploadPromise;
+
+    return `${CDN_URL}/${filename}`;
+  }
+
+  async _createRaffleReport(raffle_id, organizationId, stream) {
+    const organization = await this.organizationRepository.findByPk(organizationId);
+    if (!organization) {
+      throw new Error(this.errors.NOT_FOUND);
+    }
+
+    const csvParser = new json2csv.Parser({
+      fields: [
+        {label: 'Organization', value: 'organization'},
+        {label: 'Non Profit ID', value: 'non_profit_id'},
+        {label: 'Raffle ID', value: 'raffle_id'},
+        {label: 'Raffle Type', value: 'raffle_type'},
+        {label: 'Draw Date', value: 'draw_date'},
+        {label: 'Draw Location', value: 'draw_location'},
+        {label: 'Ticket Value', value: 'ticket_value'},
+        {label: 'Ticket ID', value: 'ticket_id'},
+        {label: 'Entry ID', value: 'entry_ids'},
+        {label: 'Player ID', value: 'player_id'},
+        {label: 'Player Name', value: 'player_name'},
+        {label: 'Player Mobile', value: 'player_mobile'},
+        {label: 'Player Email', value: 'player_email'}
+      ]
+    });
+
+    const fetchCount = 100;
+    let currentId = 0;
+
+    while (true) {
+      const whereClause = raffle_id ? {
+        id: {
+          [Op.gt]: currentId
+        },
+        raffle_id
+      }
+      : {
+        id: {
+          [Op.gt]: currentId
+        }
+      }
+
+      let sales = await this.saleRepository.model.findAll({
+        where: whereClause,
+        include: [{
+          model: this.userRepository.model,
+          as: 'player'
+        },{
+          model: this.raffleRepository.model
+        }],
+        limit: fetchCount
+      });
+
+      if (sales.length === 0) {
+        break;
+      }
+
+      currentId = sales[sales.length - 1].id;
+
+      sales = sales.map(sale => sale.get({plain: true}));
+
+      sales = await Promise.all(sales.map(async (sale) => {
+        sale.entries = await this.entryRepository.model.findAll({
+          where: {
+            ticket_sales_id: sale.id
+          }
+        });
+
+        return sale;
+      }));
+      
+      sales = sales.map(sale => ({
+        organization: organization.name,
+        non_profit_id: organization.non_profit_id,
+        raffle_id: `R${padZeros(sale.raffle_id, 2)}`,
+        raffle_type: sale.raffle.draw_type,
+        draw_date: new Date(sale.raffle.draw_datetime).toLocaleDateString(),
+        draw_location: `${organization.city}, ${organization.state}`,
+        ticket_value: `$${sale.total_price.toFixed(2)}`,
+        ticket_id: `R${padZeros(sale.raffle_id, 2)}T${padZeros(sale.id, 4)}`,
+        entry_ids: sale.entries.map(entry => `R${padZeros(sale.raffle_id, 2)}T${padZeros(sale.id, 4)}E${padZeros(entry.id, 5)}`).join(','),
+        player_id: sale.player.id,
+        player_name: `${sale.player.firstname} ${sale.player.lastname}`,
+        player_mobile: sale.player.mobile,
+        player_email: sale.player.email
+      }));
+
+      const csvData = csvParser.parse(sales);
+      stream.write(csvData);
+    }
   }
 }

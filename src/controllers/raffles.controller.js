@@ -217,6 +217,44 @@ export default class RafflesController {
       /**
        * @swagger
        *
+       * /raffles/downloadreport:
+       *  post:
+       *    description: Get raffle report download url
+       *    summary: Get raffle report download url
+       *    produces:
+       *      - application/json
+       *    tags:
+       *      - admins
+       *      - raffles
+       *    parameters:
+       *      - in: query
+       *        name: raffleId
+       *        type: integer
+       *        description: ID of the raffle
+       *    responses:
+       *      200:
+       *        description: Raffle report download url
+       *        schema:
+       *          url:
+       *            type: string
+       *      401:
+       *        description: Error user unauthorized
+       *        schema:
+       *          $ref: '#/definitions/UnauthorizedError'
+       *      400:
+       *        description: Error form validation
+       *        schema:
+       *          $ref: '#/definitions/ValidateError'
+       */
+      [
+        'post', '/api/v1/raffles/downloadreport',
+        this.authValidator.loggedAdminOnly,
+        this.raffleValidator.downloadReport,
+        this.downloadReport.bind(this)
+      ],
+      /**
+       * @swagger
+       *
        * /ticketbundles:
        *  get:
        *    tags:
@@ -483,6 +521,11 @@ export default class RafflesController {
   async uploadImage(user, data, req, res) {
     const url = await this.fileService.saveImage(req, res);
     return await this.raffleService.setImageUrl(user.organization_id, url);
+  }
+
+  async downloadReport(user, raffleId) {
+    const url = await this.raffleService.createRaffleReport(raffleId, user);
+    return {url};
   }
 
   async initStripeTicketPurchase(user, body) {
