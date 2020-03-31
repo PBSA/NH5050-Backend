@@ -90,10 +90,6 @@ class UserService {
       hashedPassword = await bcrypt.hash(password, 10);
     }
 
-    if(newUser.user_type === profileConstants.userType.player) {
-      organization_id = null;
-    }
-
     const user = await this.userRepository.model.create({
       email,
       mobile: this.userRepository.normalizePhoneNumber(mobile),
@@ -105,7 +101,7 @@ class UserService {
       user_type: newUser.user_type,
       status: profileConstants.status.active,
       ip_address: remoteAddress,
-      organization_id: organization_id
+      organization_id: newUser.user_type === profileConstants.userType.player ? null : organization_id
     });
 
     await this.createPeerplaysAccountForUser(user);
