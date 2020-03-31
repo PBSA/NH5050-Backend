@@ -3,6 +3,7 @@ import multerS3 from 'multer-s3';
 import config from 'config';
 import path from 'path';
 import randomString from 'randomstring';
+import Stream from 'stream';
 import ValidateError from './../errors/validate.error';
 
 const S3_BUCKET_NAME = config.get('s3.bucket');
@@ -22,6 +23,20 @@ export default class FileService {
       IMAGE_STRING_TOO_LONG: 'value too long for type character varying(255)',
       INVALID_REQUEST: 'Invalid request',
       FILE_TOO_LARGE: 'File too large'
+    };
+  }
+
+  createUploadStream(path) {
+    const stream = new Stream.PassThrough();
+    const promise = this.awsConnection.s3.upload({
+      Bucket: S3_BUCKET_NAME,
+      Key: path,
+      Body: stream
+    }).promise();
+
+    return {
+      stream,
+      promise
     };
   }
 
