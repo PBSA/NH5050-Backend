@@ -1,5 +1,8 @@
+import {Op} from 'sequelize';
+
 import { model } from '../db/models/raffle.model';
 import BasePostgresRepository from './abstracts/base-postgres.repository';
+const moment = require('moment');
 
 class RaffleRepository extends BasePostgresRepository {
 
@@ -17,6 +20,18 @@ class RaffleRepository extends BasePostgresRepository {
     });
   }
 
+  async findPendingRaffles() {
+    return this.model.findAll({
+      where: {
+        draw_datetime: {
+          [Op.lt]: moment()
+        },
+        winner_id: {
+          [Op.eq]: null
+        }
+      }
+    })
+  }
 }
 
 module.exports = RaffleRepository;

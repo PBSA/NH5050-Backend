@@ -46,7 +46,7 @@ class UserService {
 
   signUp(req, newUser) {
     newUser.user_type = profileConstants.userType.player;
-    return this.createUser(newUser, req.connection.remoteAddress);
+    return this.createOrUpdateUser(newUser, req.connection.remoteAddress);
   }
 
   async createPeerplaysAccountForUser(user) {
@@ -73,12 +73,12 @@ class UserService {
     return user;
   }
 
-  createOrUpdateUser(userData) {
+  createOrUpdateUser(userData, remoteAddress) {
     if (userData.hasOwnProperty('id')) {
-      return this.updateUser(userData);
+      return this.updateUser(userData, remoteAddress);
     }
 
-    return this.createUser(userData);
+    return this.createUser(userData, remoteAddress);
   }
 
   async createUser(newUser, remoteAddress) {
@@ -101,7 +101,7 @@ class UserService {
       user_type: newUser.user_type,
       status: profileConstants.status.active,
       ip_address: remoteAddress,
-      organization_id: organization_id
+      organization_id: newUser.user_type === profileConstants.userType.player ? null : organization_id
     });
 
     await this.createPeerplaysAccountForUser(user);
@@ -113,7 +113,7 @@ class UserService {
     return this.getCleanUser(user);
   }
 
-  async updateUser(updatedUser) {
+  async updateUser(updatedUser, remoteAddress) {
     const user = await this.userRepository.findByPk(updatedUser.id);
     if (!user) {
       throw new Error(this.errors.NOT_FOUND);
@@ -139,6 +139,12 @@ class UserService {
     }
 
     user.is_email_allowed = updatedUser.is_email_allowed;
+
+    if(user.user_type !== profileConstants.userType.player) {
+      user.organization_id = updatedUser.organization_id;
+    }
+
+    user.ip_address = remoteAddress;
     await user.save();
 
     return this.getCleanUser(user);

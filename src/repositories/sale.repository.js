@@ -31,6 +31,15 @@ class SaleRepository extends BasePostgresRepository {
     },options);
   }
 
+  async findTotalSuccessSalesForRaffle(raffle_id) {
+    return this.model.sum('total_price', {
+      where: {
+        raffle_id,
+        payment_status: saleConstants.paymentStatus.success
+      }
+    });
+  }
+
 }
 
 module.exports = SaleRepository;
