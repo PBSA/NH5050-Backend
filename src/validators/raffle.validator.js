@@ -520,6 +520,28 @@ class RaffleValidator extends BaseValidator {
       return query.ticketId;
     });
   }
+
+  downloadReport() {
+    const querySchema = {
+      raffleId: Joi.number().integer()
+    };
+
+    return this.validate(querySchema, null, async(req, query) => {
+      if (!query.raffleId) {
+        return null;
+      }
+
+      const raffleExists = await this.raffleRepository.findByPk(query.raffleId);
+
+      if(!raffleExists) {
+        throw new ValidateError(400, 'Validate error', {
+          raffleId: 'Raffle not found'
+        });
+      }
+
+      return query.raffleId;
+    });
+  }
 }
 
 module.exports = RaffleValidator;
