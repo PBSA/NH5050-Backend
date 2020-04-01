@@ -280,6 +280,7 @@ export default class OrganizationsController {
        */
       [
         'get', '/api/v1/organization/sellers',
+        this.authValidator.loggedAdminOnly,
         this.organizationValidator.validateOrganizationId,
         this.getSellers.bind(this)
       ],
@@ -369,6 +370,7 @@ export default class OrganizationsController {
        */
       [
         'get', '/api/v1/organization/admins',
+        this.authValidator.loggedAdminOnly,
         this.organizationValidator.validateOrganizationId,
         this.getAdmins.bind(this)
       ],
@@ -498,7 +500,7 @@ export default class OrganizationsController {
 
   async getSellers(user, organizationId) {
     if (organizationId !== user.organization_id) {
-      throw new RestError(`User does not belong to organization "${organizationId}"`);
+      throw new RestError(`User does not belong to organization "${organizationId}"`,403);
     }
 
     try {
@@ -527,7 +529,7 @@ export default class OrganizationsController {
   async getAdmins(user, organizationId) {
     const isBeneficiary = await this.organizationService.isBeneficiaryOf(user.organization_id, organizationId);
     if (organizationId !== user.organization_id && !isBeneficiary) {
-      throw new RestError('unauthorized', 403);
+      throw new RestError(`User does not belong to the organization "${organizationId}"`, 403);
     }
 
     try {
