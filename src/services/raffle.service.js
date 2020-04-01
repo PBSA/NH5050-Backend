@@ -362,10 +362,8 @@ export default class RaffleService {
       throw e;
     }
 
-    let normalRaffleResult;
-
     try{
-      normalRaffleResult = await this.peerplaysRepository.purchaseTicket(bundle.raffle.peerplays_draw_id, bundle.quantity, player);
+      await this.peerplaysRepository.purchaseTicket(bundle.raffle.peerplays_draw_id, bundle.quantity, player);
     }catch(e) {
       console.error(e);
       if (e.message.includes('insufficient')) {
@@ -386,13 +384,13 @@ export default class RaffleService {
       throw e;
     }
 
-    let progressiveRaffleResult;
+    let progressiveRaffle;
 
     if(bundle.raffle.progressive_draw_id) {
-      const progressiveRaffle = await this.raffleRepository.findByPk(bundle.raffle.progressive_draw_id);
+      progressiveRaffle = await this.raffleRepository.findByPk(bundle.raffle.progressive_draw_id);
 
       try{
-        progressiveRaffleResult = await this.peerplaysRepository.purchaseTicket(progressiveRaffle.peerplays_draw_id, bundle.quantity, player);
+        await this.peerplaysRepository.purchaseTicket(progressiveRaffle.peerplays_draw_id, bundle.quantity, player);
       }catch(e) {
         console.error(e);
         if (e.message.includes('insufficient')) {
@@ -403,13 +401,17 @@ export default class RaffleService {
       }
     }
 
+    const userLotteries = await this.peerplaysRepository.getUserLotteries(player.peerplays_account_id);
+    const normalBlockchainEntries = userLotteries.filter((lottery) => lottery.op[1].lottery === bundle.raffle.peerplays_draw_id);
+    const progressiveBlockchainEntries = userLotteries.filter((lottery) => lottery.op[1].lottery === progressiveRaffle.peerplays_draw_id);
+
     let Entries = [];
 
     for(let i = 0; i < bundle.quantity; i++) {
       let entry = await this.entryRepository.model.create({
         ticket_sales_id: Sale[0].id,
-        peerplays_raffle_ticket_id: normalRaffleResult.id,
-        peerplays_progressive_ticket_id: progressiveRaffleResult.id
+        peerplays_raffle_ticket_id: normalBlockchainEntries[i].id,
+        peerplays_progressive_ticket_id: progressiveBlockchainEntries[i].id
       });
       Entries.push(entry);
     }
