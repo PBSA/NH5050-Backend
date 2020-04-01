@@ -216,16 +216,18 @@ class PeerplaysRepository {
     );
 
     try {
-      tr.add_type_operation('ticket_purchase',{
-          lottery: draw_id,
-          buyer: player.peerplays_account_id,
-          tickets_to_buy: quantity,
-          amount: {
-              amount: new BigNumber(config.peerplays.ticketPrice).toNumber() * quantity,
-              asset_id: config.peerplays.ticketAssetID
-          },
-          extensions: null
-      });
+      for(let i = 0; i < quantity; i++) {
+        tr.add_type_operation('ticket_purchase',{
+            lottery: draw_id,
+            buyer: player.peerplays_account_id,
+            tickets_to_buy: 1,
+            amount: {
+                amount: new BigNumber(config.peerplays.ticketPrice).toNumber(),
+                asset_id: config.peerplays.ticketAssetID
+            },
+            extensions: null
+        });
+      }
 
       const pKey = keys.privKeys.active;
 
@@ -243,6 +245,10 @@ class PeerplaysRepository {
 
   async getWinners() {
     return this.peerplaysConnection.getLotteryWinners();
+  }
+
+  async getUserLotteries(peerplaysAccountId) {
+    return this.peerplaysConnection.getUserLotteries(peerplaysAccountId);
   }
 }
 
