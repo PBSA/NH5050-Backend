@@ -1,0 +1,36 @@
+stages:
+  - build
+  - deploy
+
+build:
+  image: node:12 
+  stage: build
+  script:
+    - npm install
+  cache:
+    paths:
+      - node_modules
+  artifacts:
+    paths:
+      - /*
+  tags:
+    - docker
+  
+deployToDev:
+  stage: deploy
+  script:
+    - cp -R ../NH5050-backend $PROJECT_DIR
+    - deployBackend
+  only:
+    - develop
+  tags:
+    - 5050dev
+
+deployToStaging:
+  stage: deploy
+  script:
+    - cp -R ../NH5050-backend $PROJECT_DIR
+    - deployBackend
+  tags:
+    - 5050stage
+  when: manual

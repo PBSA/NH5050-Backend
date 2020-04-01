@@ -1,0 +1,51 @@
+{
+  "db": {
+    "user": "postgres",
+    "password": "p@ssw0rd9999",
+    "host": "localhost",
+    "port": "5432",
+    "database": "nh5050"
+  },
+  "swagger": {
+    "host": "virtserver.swaggerhub.com",
+    "schemes": [
+      "https"
+    ]
+  },
+  "sessionSecret": "sessionSecret",
+  "cors": false,
+  "port": 3000,
+  "frontendUrl": "http://localhost:8082",
+  "peerplays": {
+    "peerplaysWS": "wss://dick.peerplays.download/api",
+    "peerplaysFaucetURL": "https://dick.peerplays.download/faucet/api/v1/accounts",
+    "referrer": "1.2.0",
+    "sendAssetId": "1.3.0",
+    "paymentAccountID": "1.2.19",
+    "paymentAccountWIF": "5Jy7pB4kmodpgLdrAMRr3U311AZhroYHXGBm6bsAmDHQ34pJCpn",
+    "paymentReceiver": "1.2.20",
+    "paymentReceiverWIF": "5KWi8py7bdMdvYB3hX8B9vopaxe91Fc4kCEqEF3qYxCssesyAUi",
+    "ticketPrice": 1,
+    "ticketAssetID": "1.3.0",
+    "maxTicketSupply": 10000000
+  },
+  "mailer": {
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "secure": false,
+    "auth": {
+      "user": "***REMOVED***",
+      "pass": "***REMOVED***"
+    },
+    "sender": "Prabhjot Singh"
+  },
+  "s3": {
+    "bucket": "nh5050-dev"
+  },
+  "cdnUrl": "http://d2auf3ow1jba87.cloudfront.net",
+  "stripe": {
+    "publishableKey": "pk_test_eXMu4Pj53sjl7Ff2pj3xYPh8",
+    "secretKey": "sk_test_vC4hHCnGd6c2q7l4XZZEtDV0",
+    "endpointSecret": "whsec_gqPI1tTE8B8JzNLtUlUOCB2hZnmoSwFt"
+  }
+}
