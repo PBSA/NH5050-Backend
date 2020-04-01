@@ -3,6 +3,7 @@ import RaffleService from '../services/raffle.service';
 import FileService from '../services/file.service';
 import RaffleValidator from '../validators/raffle.validator';
 import AuthValidator from '../validators/auth.validator';
+import ValidateError from '../errors/validate.error';
 
 export default class RafflesController {
   constructor(conns) {
@@ -212,6 +213,7 @@ export default class RafflesController {
       [
         'post', '/api/v1/raffles/uploadimage',
         this.authValidator.loggedAdminOnly,
+        this.raffleValidator.getRaffleById,
         this.uploadImage.bind(this)
       ],
       /**
@@ -543,9 +545,10 @@ export default class RafflesController {
     return this.raffleService.stripePaymentWebhook(req);
   }
 
-  async uploadImage(user, data, req, res) {
+  async uploadImage(user, raffleId, req, res) {
     const url = await this.fileService.saveImage(req, res);
-    return await this.raffleService.setImageUrl(user.organization_id, url);
+
+    return await this.raffleService.setImageUrl(raffleId, url);
   }
 
   async downloadReport(user, raffleId) {
