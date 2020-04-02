@@ -45,6 +45,34 @@ class MailService {
     await this.smtpConnection.sendMail(options);
   }
 
+  async sendTicketPurchaseConfirmation(firstname, email, entries, raffleName, raffleId) {
+    const sourceHTML = fs.readFileSync(`${__dirname}/templates/ticket.handlebars`).toString();
+    const templateHTML = Handlebars.compile(sourceHTML);
+    const contact = 'mailto:support@nh5050.com';
+    const terms = `${config.frontendUrl}/terms`;
+    let entriesArr = [];
+    entries.forEach((entry) => entriesArr.push({
+      id: this.addLeadingZeros(entry.id, 5),
+      ticketId: this.addLeadingZeros(entry.ticket_sales_id, 4),
+      raffleId: this.addLeadingZeros(raffleId, 2)
+    }));
+    const resultHtml = templateHTML({firstname, entriesArr, raffleName, raffleId, contact, terms});
+
+    const options = {
+      to: email,
+      from: config.mailer.sender,
+      subject: `Your tickets for ${raffleName}`,
+      html: resultHtml
+    };
+    await this.smtpConnection.sendMail(options);
+  }
+
+  addLeadingZeros(num, totalDigitsRequired) {
+    var str = num+"";
+    while (str.length < totalDigitsRequired) str = "0" + str;
+    return str;
+}
+
 }
 
 module.exports = MailService;

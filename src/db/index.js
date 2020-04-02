@@ -12,7 +12,7 @@ const password = config.get('db.password');
 const sequelize = new Sequelize(database, username, password, {
   host,
   port,
-  logging: console.debug,
+  logging: false,
   dialect: 'postgres'
 });
 

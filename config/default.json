@@ -34,8 +34,8 @@
     "port": 587,
     "secure": false,
     "auth": {
-      "user": "***REMOVED***",
-      "pass": "***REMOVED***"
+      "user": "prabhjot.narula@gmail.com",
+      "pass": "mgclffomjvbzwhvu"
     },
     "sender": "Prabhjot Singh"
   },

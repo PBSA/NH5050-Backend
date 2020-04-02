@@ -1,13 +1,15 @@
-const RestError = require('../errors/rest.error');
-const raffleValidator = require('../validators/raffle.validator');
-const authValidator = require('../validators/auth.validator');
-const raffleService = require('../services/raffle.service');
+import RestError from '../errors/rest.error';
+import RaffleService from '../services/raffle.service';
+import FileService from '../services/file.service';
+import RaffleValidator from '../validators/raffle.validator';
+import AuthValidator from '../validators/auth.validator';
 
 export default class RafflesController {
   constructor(conns) {
-    this.raffleService = new raffleService(conns);
-    this.raffleValidator = new raffleValidator();
-    this.authValidator = new authValidator();
+    this.raffleService = new RaffleService(conns);
+    this.fileService = new FileService(conns);
+    this.raffleValidator = new RaffleValidator();
+    this.authValidator = new AuthValidator();
   }
 
   /**
@@ -177,6 +179,44 @@ export default class RafflesController {
       /**
        * @swagger
        *
+       * /raffles/uploadimage:
+       *  post:
+       *    description: Add or change raffle image
+       *    summary: Add or change raffle image
+       *    produces:
+       *      - application/json
+       *    tags:
+       *      - admins
+       *      - raffles
+       *    parameters:
+       *      - in: formData
+       *        name: file
+       *        type: file
+       *        description: The file to upload.
+       *    consumes:
+       *      - multipart/form-data
+       *    responses:
+       *      200:
+       *        description: Raffle data
+       *        schema:
+       *          $ref: '#/definitions/RafflePublic'
+       *      401:
+       *        description: Error user unauthorized
+       *        schema:
+       *          $ref: '#/definitions/UnauthorizedError'
+       *      400:
+       *        description: Error form validation
+       *        schema:
+       *          $ref: '#/definitions/ValidateError'
+       */
+      [
+        'post', '/api/v1/raffles/uploadimage',
+        this.authValidator.loggedAdminOnly,
+        this.uploadImage.bind(this)
+      ],
+      /**
+       * @swagger
+       *
        * /ticketbundles:
        *  get:
        *    tags:
@@ -247,6 +287,139 @@ export default class RafflesController {
       [
         'post', '/api/v1/stripewebhook',
         this.stripePaymentWebhook.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /raffles/initpurchase:
+       *  post:
+       *    tags:
+       *    - developer
+       *    - raffles
+       *     summary: initiate stripe ticket purchase for the raffle
+       *     operationId: initStripeTicketPurchase
+       *     description: Start buying a ticket for the raffle using stripe
+       *     consumes:
+       *     - application/json
+       *     produces:
+       *     - application/json
+       *     parameters:
+       *     - in: body
+       *       name: raffle
+       *       description: ticket sale object with details of ticket to be purchased
+       *       schema:
+       *         $ref: '#/definitions/TicketSale'
+       *     responses:
+       *       200:
+       *         description: ticket purchase started
+       *         schema:
+       *           $ref: '#/definitions/TicketSalePublic'
+       *       400:
+       *         description: invalid input, object invalid
+       */
+      [
+        'post', '/api/v1/raffles/initpurchase',
+        this.raffleValidator.initStripeTicketPurchase,
+        this.initStripeTicketPurchase.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /raffles/ticketpurchase:
+       *  post:
+       *    tags:
+       *    - developer
+       *    - raffles
+       *     summary: complete ticket purchase for the raffle
+       *     operationId: ticketPurchase
+       *     description: Complete buying a ticket for the raffle
+       *     consumes:
+       *     - application/json
+       *     produces:
+       *     - application/json
+       *     parameters:
+       *     - in: body
+       *       name: raffle
+       *       description: ticket sale object with details of ticket to be purchased
+       *       schema:
+       *         $ref: '#/definitions/TicketSale'
+       *     responses:
+       *       200:
+       *         description: ticket purchase completed
+       *         schema:
+       *           $ref: '#/definitions/EntriesPublic'
+       *       400:
+       *         description: invalid input, object invalid
+       */
+      [
+        'post', '/api/v1/raffles/ticketpurchase',
+        this.raffleValidator.ticketPurchase,
+        this.ticketPurchase.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /ticketsales/{raffleId}:
+       *  get:
+       *    tags:
+       *    - developers
+       *    - raffles
+       *    summary: get all tickets sold for a raffle
+       *    operationId: getTicketSales
+       *    description: get all tickets sold for the raffle with given id
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: path
+       *      name: raffleId
+       *      description: pass the id of the raffle 
+       *      required: true
+       *      type: integer
+       *    responses:
+       *      200:
+       *        description: all ticket sales
+       *        schema:
+       *          $ref: '#/definitions/TicketSalesPublic'
+       *      400:
+       *        description: bad input parameter
+       */
+      [
+        'get','/api/v1/ticketSales/:raffleId',
+        this.raffleValidator.getRaffleById,
+        this.getTicketSales.bind(this)
+      ],
+      /**
+       * @swagger
+       * 
+       * /ticketdetails/{ticketId}:
+       *  get:
+       *    tags:
+       *    - admin
+       *    - raffles
+       *    summary: get ticket detail with entries
+       *    operationId: getTicketSaleDetails
+       *    description: get ticket detail with entries for the ticket with given id
+       *    produces:
+       *    - application/json
+       *    parameters:
+       *    - in: path
+       *      name: ticketId
+       *      description: pass the id of the ticket 
+       *      required: true
+       *      type: string
+       *    responses:
+       *      200:
+       *        description: ticket details
+       *        schema:
+       *          $ref: '#/definitions/EntriesPublic'
+       *      400:
+       *        description: bad input parameter
+       */
+      [
+        'get','/api/v1/ticketdetails/:ticketId',
+        this.authValidator.loggedAdminOnly,
+        this.raffleValidator.getTicketDetails,
+        this.getTicketSaleDetails.bind(this)
       ]
     ];
   }
@@ -272,7 +445,15 @@ export default class RafflesController {
   }
 
   async addRaffle(user, data) {
-    return await this.raffleService.addRaffle(user, data);
+    try{
+      return await this.raffleService.addRaffle(user, data);
+    } catch(e) {
+      if (e.message === this.raffleService.errors.INSUFFICIENT_BALANCE || e.message === this.raffleService.errors.PEERPLAYS_ACCOUNT_MISSING) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
   }
 
   async addBundle(user, data) {
@@ -297,5 +478,34 @@ export default class RafflesController {
 
   stripePaymentWebhook(user, pure, req) {
     return this.raffleService.stripePaymentWebhook(req);
+  }
+
+  async uploadImage(user, data, req, res) {
+    const url = await this.fileService.saveImage(req, res);
+    return await this.raffleService.setImageUrl(user.organization_id, url);
+  }
+
+  async initStripeTicketPurchase(user, body) {
+    return this.raffleService.initStripeTicketPurchase(body);
+  }
+
+  async ticketPurchase(user, body) {
+    try{
+      return await this.raffleService.ticketPurchase(body);
+    } catch(e) {
+      if (e.message === this.raffleService.errors.INSUFFICIENT_BALANCE || e.message === this.raffleService.errors.PEERPLAYS_ACCOUNT_MISSING) {
+        throw new RestError(e.message, 404);
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
+  }
+
+  async getTicketSales(user, raffleId) {
+    return this.raffleService.getTicketSales(raffleId);
+  }
+
+  async getTicketSaleDetails(user, ticketId) {
+    return this.raffleService.getTicketSaleDetails(ticketId);
   }
 }

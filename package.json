@@ -1,6 +1,6 @@
 {
   "name": "nh5050-backend",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "",
   "main": "index.js",
   "directories": {
@@ -41,6 +41,7 @@
     "@babel/core": "^7.8.7",
     "@babel/node": "^7.8.7",
     "@babel/preset-env": "^7.8.7",
+    "nodemon": "^2.0.2",
     "sequelize-cli": "^5.5.1"
   },
   "scripts": {
