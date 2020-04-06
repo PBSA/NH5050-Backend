@@ -16,6 +16,7 @@ const OrganizationRepository = require('../repositories/organization.repository'
 const BeneficiaryRepository = require('../repositories/beneficiary.repository').default;
 const saleConstants = require('../constants/sale');
 const transactionConstants = require('../constants/transaction');
+const raffleConstants = require('../constants/raffle');
 const MailService = require('../services/mail.service');
 const FileService = require('../services/file.service').default;
 const RestError = require('../errors/rest.error');
@@ -74,7 +75,7 @@ export default class RaffleService {
   async calculateAmounts(raffle) {
     const totalSales = await this.saleRepository.findTotalSuccessSalesForRaffle(raffle.id);
 
-    let totalProgressiveSales = 0;
+    let totalProgressiveJackpot = 0;
     const rafflesInProgressive = await this.raffleRepository.model.findAll({
       where: {
         progressive_draw_id: raffle.progressive_draw_id
@@ -82,7 +83,7 @@ export default class RaffleService {
     });
 
     for(let i = 0; i < rafflesInProgressive.length; i++) {
-      totalProgressiveSales += await this.saleRepository.findTotalSuccessSalesForRaffle(rafflesInProgressive[i].id);
+      totalProgressiveJackpot += (await this.saleRepository.findTotalSuccessSalesForRaffle(rafflesInProgressive[i].id) * rafflesInProgressive[i].progressive_draw_percent / 100);
     }
 
     const numBeneficiaries = await this.beneficiaryRepository.model.count({where: {
@@ -91,7 +92,7 @@ export default class RaffleService {
 
     return {
       total_jackpot: (totalSales * raffle.raffle_draw_percent / 100).toFixed(2),
-      total_progressive_jackpot: (totalProgressiveSales * raffle.progressive_draw_percent / 100).toFixed(2),
+      total_progressive_jackpot: totalProgressiveJackpot.toFixed(2),
       each_beneficiary_amount: ((totalSales * raffle.beneficiary_percent / 100)/numBeneficiaries).toFixed(2),
       organization_amount: (totalSales * raffle.organization_percent / 100).toFixed(2),
       admin_fee_amount: (totalSales * raffle.admin_fees_percent / 100).toFixed(2),
@@ -416,7 +417,9 @@ export default class RaffleService {
       Entries.push(entry);
     }
 
-    await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.raffle.raffle_name, bundle.raffle_id);
+    if(player.is_email_allowed && progressiveRaffle) {
+      await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.raffle.raffle_name, bundle.raffle_id, progressiveRaffle.draw_datetime);
+    }
 
     const beneficiary = await this.beneficiaryRepository.findByPk(Sale[0].beneficiary_id, {
       include: [{
@@ -683,16 +686,38 @@ export default class RaffleService {
       if(user) {
         pendingRaffles[i].winner_id = user.id;
 
+        let amounts = await this.calculateAmounts(pendingRaffles[i]);
         //We know the winner from the blockchain but the winning entry is not provided by the blockchain.
         //So, create an array of entries of tickets purchased by the winner and choose the winning entry using Math.Random()
-        const userTickets = await this.saleRepository.model.findAll({
+        let whereUserTickets = {
           where: {
             raffle_id: pendingRaffles[i].id,
             player_id: user.id,
             payment_status: saleConstants.paymentStatus.success
           }
-        });
+        };
 
+        if(pendingRaffles[i].draw_type == raffleConstants.drawType.progressive) {
+          const rafflesForProgressive = await this.raffleRepository.model.findAll({
+            where: {
+              progressive_draw_id: pendingRaffles[i].id
+            }
+          });
+          let raffleIdArr = [{
+            raffle_id: pendingRaffles[i].id
+          }];
+          rafflesForProgressive.map((raffle) => raffleIdArr.push({raffle_id: raffle.id}));
+          whereUserTickets = {
+            where: {
+              [Op.or]: raffleIdArr,
+              player_id: user.id,
+              payment_status: saleConstants.paymentStatus.success
+            }
+          };
+          amounts = await this.calculateProgressiveAmounts(pendingRaffles[i].id);
+        }
+
+        const userTickets = await this.saleRepository.model.findAll(whereUserTickets);
         let userEntries = [];
 
         for(let j = 0; j < userTickets.length; j++) {
@@ -705,13 +730,98 @@ export default class RaffleService {
           userEntries.push(...entries);
         }
 
-        const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+        if(userEntries.length === 0) {
+          continue;
+        }
 
+        const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+        console.log('draw id: ' + pendingRaffles[i].id + ' draw type: ' + pendingRaffles[i].draw_type + ' ' + winningTicketPosition + ' userEntriesLength: ' + userEntries.length);
         pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
-        pendingRaffles[i].save();
+        await pendingRaffles[i].save();
+
+        await this.distributeWinnerAmount(user.peerplays_account_id, user.peerplays_account_name, user.peerplays_master_password, amounts.total_jackpot, pendingRaffles[i].id);
+
+        if(user.is_email_allowed) {
+          const progressiveRaffle = this.raffleRepository.findByPk(pendingRaffles[i].progressive_draw_id);
+          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, pendingRaffles[i].draw_datetime, amounts.total_jackpot, amounts.total_progressive_jackpot, progressiveRaffle.draw_datetime);
+        }
+
+        if(pendingRaffles[i].draw_type !== raffleConstants.drawType.progressive) {
+          await this.distributeBeneficiaryAndAdminAmount(amounts, pendingRaffles[i].organization_id, pendingRaffles[i].id);
+        }
       }
     }
 
     return true;
+  }
+
+  async calculateProgressiveAmounts(raffle_id) {
+    let totalProgressiveJackpot = 0;
+    const rafflesInProgressive = await this.raffleRepository.model.findAll({
+      where: {
+        progressive_draw_id: raffle_id
+      }
+    });
+
+    for(let i = 0; i < rafflesInProgressive.length; i++) {
+      totalProgressiveJackpot += (await this.saleRepository.findTotalSuccessSalesForRaffle(rafflesInProgressive[i].id) * rafflesInProgressive[i].progressive_draw_percent / 100);
+    }
+
+    return {
+      total_jackpot: totalProgressiveJackpot.toFixed(2),
+      total_progressive_jackpot: totalProgressiveJackpot.toFixed(2),
+      each_beneficiary_amount: 0,
+      organization_amount: 0,
+      admin_fee_amount: 0,
+      donation_amount: 0
+    };
+  }
+
+  async distributeWinnerAmount(winnerPeerplaysId, winnerPeerplaysName, winnerPeerplaysPassword, amount, raffleId) {
+    if(amount <= 0) {
+      return;
+    }
+
+    const result = await this.peerplaysRepository.sendUSDFromReceiverAccount(winnerPeerplaysId, amount);
+
+    await this.transactionRepository.model.create({
+      transfer_from: result.trx.operations[0][1].from,
+      transfer_to: result.trx.operations[0][1].to,
+      raffle_id: raffleId,
+      peerplays_block_num: result.block_num,
+      peerplays_transaction_ref: result.trx_num,
+      amount,
+      transaction_type: transactionConstants.transactionType.winnings
+    });
+
+    const keys = Login.generateKeys(
+      winnerPeerplaysName,
+      winnerPeerplaysPassword,
+      ['active'],
+      IS_PRODUCTION ? 'PPY' : 'TEST'
+    );
+    await this.peerplaysRepository.sendUSDFromWinnerToPaymentAccount(winnerPeerplaysId, keys.privKeys.active, amount);
+  }
+
+  async distributeBeneficiaryAndAdminAmount(amounts, organization_id, raffleId) {
+    const numBeneficiaries = await this.beneficiaryRepository.model.count({where: {
+      organization_id
+    }});
+
+    const amount = +amounts.admin_fee_amount + +amounts.donation_amount + +amounts.organization_amount + +amounts.each_beneficiary_amount * +numBeneficiaries;
+    if(amount <= 0) {
+      return;
+    }
+
+    const result = await this.peerplaysRepository.sendUSDFromReceiverToPaymentAccount(amount);
+    await this.transactionRepository.model.create({
+      transfer_from: result.trx.operations[0][1].from,
+      transfer_to: result.trx.operations[0][1].to,
+      raffle_id: raffleId,
+      peerplays_block_num: result.block_num,
+      peerplays_transaction_ref: result.trx_num,
+      amount,
+      transaction_type: transactionConstants.transactionType.donations
+    });
   }
 }

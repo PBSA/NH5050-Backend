@@ -174,7 +174,7 @@ const attributes = {
     allowNull: false
   },
   raffle_description: {
-    type: Sequelize.STRING,
+    type: Sequelize.STRING(1500),
     allowNull: false
   },
   slug: {
