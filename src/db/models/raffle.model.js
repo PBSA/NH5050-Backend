@@ -135,6 +135,8 @@ class RaffleModel extends Model {
    *          example: 1
    *        winner:
    *          $ref: '#/definitions/UserPublic'
+   *        winning_entry_id:
+   *          type: integer
    *  RafflesPublic:
    *    type: array
    *    items:
@@ -160,7 +162,9 @@ class RaffleModel extends Model {
       progressive_draw_percent: this.progressive_draw_percent,
       organization_percent: this.organization_percent,
       beneficiary_percent: this.beneficiary_percent,
-      image_url: this.image_url
+      image_url: this.image_url,
+      winner_id: this.winner_id,
+      winning_entry_id: this.winning_entry_id
     };
   }
 }
@@ -227,6 +231,9 @@ const attributes = {
   },
   winner_id: {
     type: Sequelize.INTEGER
+  },
+  winning_entry_id: {
+    type: Sequelize.INTEGER
   }
 };
 
@@ -240,6 +247,7 @@ module.exports = {
   associate(models) {
     RaffleModel.belongsTo(models.User.model, {foreignKey : 'winner_id', targetKey: 'id'});
     RaffleModel.belongsTo(models.Organization.model, {foreignKey : 'organization_id', targetKey: 'id'});
+    RaffleModel.belongsTo(models.Entry.model, {foreignKey: 'winning_entry_id', targetKey:'id'});
   },
   get model() {
     return RaffleModel;

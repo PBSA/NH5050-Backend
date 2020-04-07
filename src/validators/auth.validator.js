@@ -44,12 +44,14 @@ class AuthValidator extends BaseValidator {
 
   validatePlayerSignUp() {
     const bodySchema = {
+      id: Joi.number().integer(),
       email: Joi.string().email().required(),
       mobile: Joi.string().regex(/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/).required(),
       firstname: Joi.string().required(),
       lastname: Joi.string().required(),
       password: Joi.string().regex(/^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])[a-zA-Z0-9!@#\$%\^&\*]+$/).min(6).max(60),
-      is_email_allowed: Joi.boolean().required()
+      is_email_allowed: Joi.boolean().required(),
+      organization_id: Joi.number().integer()
     };
 
     return this.validate(null, bodySchema, async (req, query, body) => {
@@ -64,15 +66,19 @@ class AuthValidator extends BaseValidator {
       const alreadyExists = await this.userRepository.getByEmailOrMobile(email.toLowerCase(), mobile);
 
       if (alreadyExists && alreadyExists.email === email.toLowerCase()) {
-        throw new ValidateError(400, 'Validate error', {
-          email: 'This email is already used'
-        });
+        if(!body.hasOwnProperty('id') || alreadyExists.id !== body.id) {
+          throw new ValidateError(400, 'Validate error', {
+            email: 'This email is already used'
+          });
+        }
       }
 
       if (alreadyExists && alreadyExists.mobile === this.userRepository.normalizePhoneNumber(mobile)) {
-        throw new ValidateError(400, 'Validate error', {
-          mobile: 'This mobile number is already used'
-        });
+        if(!body.hasOwnProperty('id') || alreadyExists.id !== body.id) {
+          throw new ValidateError(400, 'Validate error', {
+            mobile: 'This mobile number is already used'
+          });
+        }
       }
 
       return body;

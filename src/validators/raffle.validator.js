@@ -35,6 +35,7 @@ class RaffleValidator extends BaseValidator {
     this.ticketPurchase = this.ticketPurchase.bind(this);
     this.checkSales = this.checkSales.bind(this);
     this.getTicketDetails = this.getTicketDetails.bind(this);
+    this.downloadReport = this.downloadReport.bind(this);
   }
 
   getRaffleById() {
@@ -112,25 +113,25 @@ class RaffleValidator extends BaseValidator {
           });
         }
 
-        if(raffleExists.start_datetime !== body.start_datetime) {
+        if(moment(raffleExists.start_datetime).diff(moment(body.start_datetime)) !== 0) {
           throw new ValidateError(400, 'Validate error', {
             start_datetime: 'Cannot change the start date and time of a raffle'
           });
         }
 
-        if(raffleExists.end_datetime !== body.end_datetime) {
+        if(moment(raffleExists.end_datetime).diff(moment(body.end_datetime)) !== 0) {
           throw new ValidateError(400, 'Validate error', {
             end_datetime: 'Cannot change the end date and time of a raffle'
           });
         }
 
-        if(raffleExists.draw_datetime !== body.draw_datetime) {
+        if(moment(raffleExists.draw_datetime).diff(moment(body.draw_datetime)) !== 0) {
           throw new ValidateError(400, 'Validate error', {
             draw_datetime: 'Cannot change the draw date and time of a raffle'
           });
         }
 
-        if(moment(raffleExists.start_datetime).diff(moment()) >= 0) {
+        if(moment(raffleExists.start_datetime).diff(moment()) < 0) {
           if(admin_fees_percent) {
             throw new ValidateError(400, 'Validate error', {
               admin_fees_percent: 'Cannot change the percentages for a started or ended raffle'
@@ -518,6 +519,28 @@ class RaffleValidator extends BaseValidator {
       }
 
       return query.ticketId;
+    });
+  }
+
+  downloadReport() {
+    const querySchema = {
+      raffleId: Joi.number().integer()
+    };
+
+    return this.validate(querySchema, null, async(req, query) => {
+      if (!query.raffleId) {
+        return null;
+      }
+
+      const raffleExists = await this.raffleRepository.findByPk(query.raffleId);
+
+      if(!raffleExists) {
+        throw new ValidateError(400, 'Validate error', {
+          raffleId: 'Raffle not found'
+        });
+      }
+
+      return query.raffleId;
     });
   }
 }

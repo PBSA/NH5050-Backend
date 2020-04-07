@@ -3,6 +3,7 @@ import RaffleService from '../services/raffle.service';
 import FileService from '../services/file.service';
 import RaffleValidator from '../validators/raffle.validator';
 import AuthValidator from '../validators/auth.validator';
+import ValidateError from '../errors/validate.error';
 
 export default class RafflesController {
   constructor(conns) {
@@ -212,7 +213,46 @@ export default class RafflesController {
       [
         'post', '/api/v1/raffles/uploadimage',
         this.authValidator.loggedAdminOnly,
+        this.raffleValidator.getRaffleById,
         this.uploadImage.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /raffles/downloadreport:
+       *  post:
+       *    description: Get raffle report download url
+       *    summary: Get raffle report download url
+       *    produces:
+       *      - application/json
+       *    tags:
+       *      - admins
+       *      - raffles
+       *    parameters:
+       *      - in: query
+       *        name: raffleId
+       *        type: integer
+       *        description: ID of the raffle
+       *    responses:
+       *      200:
+       *        description: Raffle report download url
+       *        schema:
+       *          url:
+       *            type: string
+       *      401:
+       *        description: Error user unauthorized
+       *        schema:
+       *          $ref: '#/definitions/UnauthorizedError'
+       *      400:
+       *        description: Error form validation
+       *        schema:
+       *          $ref: '#/definitions/ValidateError'
+       */
+      [
+        'post', '/api/v1/raffles/downloadreport',
+        this.authValidator.loggedAdminOnly,
+        this.raffleValidator.downloadReport,
+        this.downloadReport.bind(this)
       ],
       /**
        * @swagger
@@ -420,6 +460,31 @@ export default class RafflesController {
         this.authValidator.loggedAdminOnly,
         this.raffleValidator.getTicketDetails,
         this.getTicketSaleDetails.bind(this)
+      ],
+      /**
+       * @swagger
+       * 
+       * /resolveRaffles:
+       *  get:
+       *    tags:
+       *    - admin
+       *    - raffles
+       *    summary: resolve pending raffles
+       *    operationId: resolveRaffles
+       *    description: get draw winner details from the blockchain and populate the winner_id
+       *    produces:
+       *    - application/json
+       *    responses:
+       *      200:
+       *        description: ticket details
+       *        type: boolean
+       *      400:
+       *        description: bad input parameter
+       */
+      [
+        'get','/api/v1/resolveRaffles',
+        this.authValidator.loggedAdminOnly,
+        this.resolveRaffles.bind(this)
       ]
     ];
   }
@@ -480,9 +545,15 @@ export default class RafflesController {
     return this.raffleService.stripePaymentWebhook(req);
   }
 
-  async uploadImage(user, data, req, res) {
+  async uploadImage(user, raffleId, req, res) {
     const url = await this.fileService.saveImage(req, res);
-    return await this.raffleService.setImageUrl(user.organization_id, url);
+
+    return await this.raffleService.setImageUrl(raffleId, url);
+  }
+
+  async downloadReport(user, raffleId) {
+    const url = await this.raffleService.createRaffleReport(raffleId, user);
+    return {url};
   }
 
   async initStripeTicketPurchase(user, body) {
@@ -507,5 +578,9 @@ export default class RafflesController {
 
   async getTicketSaleDetails(user, ticketId) {
     return this.raffleService.getTicketSaleDetails(ticketId);
+  }
+
+  async resolveRaffles() {
+    return this.raffleService.resolveRaffles();
   }
 }

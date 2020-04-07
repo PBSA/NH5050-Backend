@@ -188,8 +188,21 @@ export default class OrganizationService {
     return admins.map(admin => admin.getPublic());
   }
 
-  createOrUpdateAdmin(organizationId, adminData) {
-    adminData.organization_id = organizationId;
+  async createOrUpdateAdmin(organizationId, adminData) {
+    //allow super admin to create admin with any organization
+    //allow an organization to create admins for its beneficiaries
+    if(organizationId && organizationId !== adminData.organization_id) {
+      const beneficiary = await this.beneficiaryRepository.model.findOne({
+        where: {
+          organization_id: organizationId,
+          user_id: adminData.organization_id
+        }
+      });
+
+      if(!beneficiary) {
+        adminData.organization_id = organizationId;
+      }
+    }
     adminData.user_type = userType.admin;
 
     return this.userService.createOrUpdateUser(adminData);
