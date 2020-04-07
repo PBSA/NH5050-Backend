@@ -117,15 +117,23 @@ class PeerplaysRepository {
   }
   
   async sendUSDFromPaymentAccount(accountId, amount) {
-    return this.sendPPY(accountId, amount, config.peerplays.paymentAccountID, this.pKey, config.peerplays.sendAssetId);
+    return this.sendPPY(accountId, Number(amount) + await this.getTransferFee(config.peerplays.sendAssetId), config.peerplays.paymentAccountID, this.pKey, config.peerplays.sendAssetId);
   }
 
   async sendPPYFromPaymentAccount(accountId, ticketsToBuy) {
     return this.sendPPY(accountId, 2 * config.peerplays.ticketPrice * ticketsToBuy / Math.pow(10, this.peerplaysConnection.asset.precision), config.peerplays.paymentAccountID, this.pKey, config.peerplays.ticketAssetID);
   }
 
-  async sendPPYFromReceiverAccount(accountId, amount) {
-    return this.sendPPY(accountId, amount, config.peerplays.paymentReceiver, this.receiverPKey, config.peerplays.sendAssetId);
+  async sendUSDFromReceiverAccount(accountId, amount) {
+    return this.sendPPY(accountId, Number(amount) + await this.getTransferFee(config.peerplays.sendAssetId), config.peerplays.paymentReceiver, this.receiverPKey, config.peerplays.sendAssetId);
+  }
+
+  async sendUSDFromWinnerToPaymentAccount(playerId, playerPKey, amount) {
+    return this.sendPPY(config.peerplays.paymentAccountID, amount, playerId, playerPKey, config.peerplays.sendAssetId);
+  }
+
+  async sendUSDFromReceiverToPaymentAccount(amount) {
+    return this.sendPPY(config.peerplays.paymentAccountID, amount, config.peerplays.paymentReceiver, this.receiverPKey, config.peerplays.sendAssetId);
   }
 
   randomizeLottoName() {
@@ -182,8 +190,8 @@ class PeerplaysRepository {
           whitelist_markets: [],
           blacklist_markets: [],
           description: JSON.stringify({
-            lottoName: name.substring(0,40),
-            description: description.substring(0,100),
+            lottoName: name.substring(0,30),
+            description: description.substring(0,80),
             drawType: 1
             }),
           extensions: []
@@ -249,6 +257,12 @@ class PeerplaysRepository {
 
   async getUserLotteries(peerplaysAccountId) {
     return this.peerplaysConnection.getUserLotteries(peerplaysAccountId);
+  }
+
+  async getTransferFee(assetId) {
+    return await this.peerplaysConnection.dbAPI.exec('get_required_fees', [[[0]], assetId]).then((result) => {
+      return result[0]['amount']/Math.pow(10,this.peerplaysConnection.asset.precision);
+    });
   }
 }
 

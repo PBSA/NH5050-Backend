@@ -18,6 +18,30 @@ module.exports = {
       updatedAt: new Date()
     }]);
 
+    await queryInterface.bulkInsert('organizations', [{
+      id: 2,
+      name: 'test beneficiary',
+      type: 'beneficiary',
+      address_line1: 'address',
+      city: 'city',
+      state: 'state',
+      country: 'us',
+      zip: 'zip',
+      time_format: '12h',
+      logo_url: 'https://example.com/logo.png',
+      website_url: 'https://example.com',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }]);
+
+    await queryInterface.bulkInsert('beneficiaries', [{
+      id: 1,
+      user_id: 2,
+      organization_id: 1,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }]);
+
     await queryInterface.bulkInsert('users', [{
       id: 1,
       email: 'test@example.com',
