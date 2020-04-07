@@ -64,11 +64,6 @@ class AuthValidator extends BaseValidator {
       }
 
       const alreadyExists = await this.userRepository.getByEmailOrMobile(email.toLowerCase(), mobile);
-      if (alreadyExists && alreadyExists.user_type !== profileConstants.userType.player) {
-        throw new ValidateError(400, 'Validate error', {
-          email: 'Admins and sellers are not permitted to participate in the raffle.'
-        });
-      }
 
       if (alreadyExists && alreadyExists.email === email.toLowerCase()) {
         if(!body.hasOwnProperty('id') || alreadyExists.id !== body.id) {

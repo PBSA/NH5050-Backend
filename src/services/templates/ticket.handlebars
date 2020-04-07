@@ -1,5 +1,4 @@
-<p>Hi {{firstname}}!</p>
-<p>Here are your ticket entry numbers for the {{raffleName}} and Progressive Raffle -- Good Luck!</p>
+<p>Thank you for entering the {{raffleName}} Raffle! Below are your entry numbers for this month’s drawing and shall be entered into the Progressive Jackpot Drawing on the Marine Corps Birthday, {{progressiveDate}} EST.</p>
 <div>
 <ul>
 {{#each entriesArr}}
@@ -7,7 +6,7 @@
 {{/each}}
 </ul>
 </div>
-<p>If you need assistance with your account, please visit our support center at <a href='https://nh5050.com/'>https://nh5050.com/</a></p>
+<p>If you need assistance, please visit our support center at <a href='{{contact}}'>{{contactEmail}}</a></p>
 <p>Warm regards,<br>
 New Hampshire Marine Corps</p>
-<a href='{{contact}}'>Contact Us</a> | <a href='{{terms}}'>Privacy Policy</a></p>
+<a href='{{terms}}'>Terms &amp; Conditions</a>

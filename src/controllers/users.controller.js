@@ -220,7 +220,17 @@ export default class UsersController {
   }
 
   async playerSignup(user, data, req) {
-    return await this.userService.signUp(req, data);
+    try{
+      return await this.userService.signUp(req, data);
+    } catch(e) {
+      if(e.message == this.userService.errors.INVALID_USER_TYPE) {
+        throw new ValidateError(400, 'Validate error', {
+          email: 'Admins and sellers are not permitted to participate in the raffle.'
+        });
+      } else {
+        throw new RestError(e.message, 500);
+      }
+    }
   }
 
   async signIn(_, {email, password}, req) {
