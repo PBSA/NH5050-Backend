@@ -735,7 +735,6 @@ export default class RaffleService {
         }
 
         const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
-        console.log('draw id: ' + pendingRaffles[i].id + ' draw type: ' + pendingRaffles[i].draw_type + ' ' + winningTicketPosition + ' userEntriesLength: ' + userEntries.length);
         pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
         await pendingRaffles[i].save();
 
@@ -743,7 +742,7 @@ export default class RaffleService {
 
         if(user.is_email_allowed) {
           const progressiveRaffle = this.raffleRepository.findByPk(pendingRaffles[i].progressive_draw_id);
-          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, pendingRaffles[i].draw_datetime, amounts.total_jackpot, amounts.total_progressive_jackpot, progressiveRaffle.draw_datetime);
+          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, amounts.total_jackpot, progressiveRaffle.draw_datetime);
         }
 
         if(pendingRaffles[i].draw_type !== raffleConstants.drawType.progressive) {
