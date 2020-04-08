@@ -726,16 +726,41 @@ export default class RaffleService {
           continue;
         }
 
-        const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
-        pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
+        if(winner.op[1].hasOwnProperty('winner_ticket_id') && winner.op[1].winner_ticket_id[1] !== 0) {
+          let winningWhereClause = {
+            where: {
+              peerplays_raffle_ticket_id: `1.11.${winner.op[1].winner_ticket_id[1]}`
+            }
+          };
+
+          if(pendingRaffles[i].draw_type === raffleConstants.drawType.progressive) {
+            winningWhereClause = {
+              where: {
+                peerplays_progressive_ticket_id: `1.11.${winner.op[1].winner_ticket_id[1]}`
+              }
+            };
+          }
+
+          const winning_entry = await this.entryRepository.findAll(winningWhereClause);
+          if(winning_entry.length > 0) {
+            pendingRaffles[i].winning_entry_id = winning_entry[0].id;
+          }else {
+            const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+            pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
+          }
+        }else {
+          const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+          pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
+        }
+
         await pendingRaffles[i].save();
 
         await this.distributeWinnerAmount(user.peerplays_account_id, user.peerplays_account_name, user.peerplays_master_password, amounts.total_jackpot, pendingRaffles[i].id);
 
         if(user.is_email_allowed) {
-          const progressiveRaffle = await this.raffleRepository.findByPk(pendingRaffles[i].progressive_draw_id);
+          const progressiveRaffle = await this.raffleRepository.findByPk(pendingRaffles[i].draw_type === raffleConstants.drawType.progressive ? pendingRaffles[i].id : pendingRaffles[i].progressive_draw_id);
           const org = await this.organizationRepository.findByPk(pendingRaffles[i].organization_id);
-          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, amounts.total_jackpot, progressiveRaffle.draw_datetime, organization.name);
+          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, amounts.total_jackpot, progressiveRaffle.draw_datetime, org.name);
         }
 
         if(pendingRaffles[i].draw_type !== raffleConstants.drawType.progressive) {
