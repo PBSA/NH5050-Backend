@@ -145,18 +145,18 @@ class PeerplaysRepository {
     return text;
 }
 
-  async createLottery(userPeerplaysId, name, description, drawDate, userPKey) {
+  async createLottery(name, description, drawDate) {
     const tr = new this.peerplaysConnection.TransactionBuilder();
     let result;
 
     try {
       tr.add_type_operation('lottery_asset_create', {
-        issuer: userPeerplaysId,
+        issuer: config.peerplays.paymentAccountID,
         symbol: this.randomizeLottoName(),
         precision: 0,
         extensions: {
           benefactors: [{
-            id: userPeerplaysId,
+            id: config.peerplays.paymentAccountID,
             share: new BigNumber(50).shiftedBy(2).toNumber()
           }],
           owner: config.peerplays.ticketAssetID,
@@ -201,7 +201,7 @@ class PeerplaysRepository {
 
 
       await tr.set_required_fees();
-      tr.add_signer(userPKey, userPKey.toPublicKey().toPublicKeyString());
+      tr.add_signer(this.pKey, this.pKey.toPublicKey().toPublicKeyString());
       console.trace('serialized transaction:', JSON.stringify(tr.serialize()));
       [result] = await tr.broadcast();
     } catch (e) {

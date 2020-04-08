@@ -112,7 +112,7 @@ export default class RaffleService {
     }));
   }
 
-  async addRaffle(user, newRaffle) {
+  async addRaffle(newRaffle) {
     if(newRaffle.id) {
       const raffleExists = await this.raffleRepository.findByPk(newRaffle.id);
 
@@ -122,20 +122,9 @@ export default class RaffleService {
       return raffleExists.getPublic();
     }
 
-    if(!user.peerplays_account_name || !user.peerplays_master_password) {
-      throw new Error(this.errors.PEERPLAYS_ACCOUNT_MISSING);
-    }
-
-    const keys = Login.generateKeys(
-      user.peerplays_account_name,
-      user.peerplays_master_password,
-      ['active'],
-      IS_PRODUCTION ? 'PPY' : 'TEST'
-    );
-
     let lotteryResult;
     try{
-      lotteryResult = await this.peerplaysRepository.createLottery(user.peerplays_account_id, newRaffle.raffle_name, newRaffle.raffle_description, newRaffle.draw_datetime, keys.privKeys.active);
+      lotteryResult = await this.peerplaysRepository.createLottery(newRaffle.raffle_name, newRaffle.raffle_description, newRaffle.draw_datetime);
     }catch(e) {
       console.error(e);
 
