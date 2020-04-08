@@ -374,6 +374,8 @@ export default class RaffleService {
       throw e;
     }
 
+    const normalLotteries = await this.peerplaysRepository.getUserLotteries(player.peerplays_account_id);
+
     try{
       await this.transferFromPlayerToEscrow(bundle.price, bundle.raffle_id, player.peerplays_account_id, player.peerplays_account_name, player.peerplays_master_password);
     } catch(e) {
@@ -402,9 +404,9 @@ export default class RaffleService {
       }
     }
 
-    const userLotteries = await this.peerplaysRepository.getUserLotteries(player.peerplays_account_id);
-    const normalBlockchainEntries = userLotteries.filter((lottery) => lottery.op[1].lottery === bundle.raffle.peerplays_draw_id);
-    const progressiveBlockchainEntries = userLotteries.filter((lottery) => lottery.op[1].lottery === progressiveRaffle.peerplays_draw_id);
+    const progressiveLotteries = await this.peerplaysRepository.getUserLotteries(player.peerplays_account_id);
+    const normalBlockchainEntries = normalLotteries.filter((lottery) => lottery.op[1].lottery === bundle.raffle.peerplays_draw_id).sort((a,b) => Number(b.id.split('.')[2]) - Number(a.id.split('.')[2]));
+    const progressiveBlockchainEntries = progressiveLotteries.filter((lottery) => lottery.op[1].lottery === progressiveRaffle.peerplays_draw_id).sort((a,b) => Number(b.id.split('.')[2]) - Number(a.id.split('.')[2]));
 
     let Entries = [];
 
@@ -418,7 +420,8 @@ export default class RaffleService {
     }
 
     if(player.is_email_allowed && progressiveRaffle) {
-      await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.raffle.raffle_name, bundle.raffle_id, progressiveRaffle.draw_datetime);
+      const organization = await this.organizationRepository.findByPk(bundle.raffle.organization_id);
+      await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.raffle.raffle_name, bundle.raffle_id, progressiveRaffle.draw_datetime, organization.name);
     }
 
     const beneficiary = await this.beneficiaryRepository.findByPk(Sale[0].beneficiary_id, {
@@ -741,8 +744,9 @@ export default class RaffleService {
         await this.distributeWinnerAmount(user.peerplays_account_id, user.peerplays_account_name, user.peerplays_master_password, amounts.total_jackpot, pendingRaffles[i].id);
 
         if(user.is_email_allowed) {
-          const progressiveRaffle = this.raffleRepository.findByPk(pendingRaffles[i].progressive_draw_id);
-          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, amounts.total_jackpot, progressiveRaffle.draw_datetime);
+          const progressiveRaffle = await this.raffleRepository.findByPk(pendingRaffles[i].progressive_draw_id);
+          const org = await this.organizationRepository.findByPk(pendingRaffles[i].organization_id);
+          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, amounts.total_jackpot, progressiveRaffle.draw_datetime, organization.name);
         }
 
         if(pendingRaffles[i].draw_type !== raffleConstants.drawType.progressive) {
