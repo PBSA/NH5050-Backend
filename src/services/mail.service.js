@@ -1,6 +1,7 @@
 const fs = require('fs-extra');
 const Handlebars = require('handlebars');
 const config = require('config');
+const moment = require('moment');
 
 class MailService {
 
@@ -15,9 +16,10 @@ class MailService {
   async sendMailAfterRegistration(firstname, email) {
     const sourceHTML = fs.readFileSync(`${__dirname}/templates/welcome.handlebars`).toString();
     const templateHTML = Handlebars.compile(sourceHTML);
-    const contact = 'mailto:support@nh5050.com';
-    const terms = `${config.frontendUrl}/terms`;
-    const resultHtml = templateHTML({firstname, contact, terms});
+    const contact = 'mailto:raffles@seacoastmarines.org';
+    const contactEmail = 'raffles@seacoastmarines.org';
+    const terms = 'https://www.seacoastmarines.org/raffle-rules/terms-conditions/';
+    const resultHtml = templateHTML({firstname, contact, contactEmail, terms});
 
     const options = {
       to: email,
@@ -28,13 +30,15 @@ class MailService {
     await this.smtpConnection.sendMail(options);
   }
 
-  async sendWinnerMail(firstname, email, raffleId, raffleName) {
+  async sendWinnerMail(firstname, email, raffleName, raffleDateTime, amount, progressiveJackpot, progressiveDrawDate) {
     const sourceHTML = fs.readFileSync(`${__dirname}/templates/winner.handlebars`).toString();
     const templateHTML = Handlebars.compile(sourceHTML);
-    const contact = 'mailto:support@nh5050.com';
-    const terms = `${config.frontendUrl}/terms`;
-    const url = `${config.frontendUrl}/raffle/${raffleId}`;
-    const resultHtml = templateHTML({firstname, url, contact, terms, raffleName});
+    const contact = 'mailto:raffles@seacoastmarines.org';
+    const terms = 'https://www.seacoastmarines.org/raffle-rules/terms-conditions/';
+    const raffleDate = moment(raffleDateTime).format('MMMM Do, YYYY');
+    const progressiveDate = moment(progressiveDrawDate).format('MMMM Do');
+    const progressiveTime = moment(progressiveDrawDate).format('hh:mm a');
+    const resultHtml = templateHTML({firstname, amount, contact, raffleName, raffleDate, progressiveJackpot, progressiveDate, progressiveTime, terms});
 
     const options = {
       to: email,
@@ -45,18 +49,20 @@ class MailService {
     await this.smtpConnection.sendMail(options);
   }
 
-  async sendTicketPurchaseConfirmation(firstname, email, entries, raffleName, raffleId) {
+  async sendTicketPurchaseConfirmation(firstname, email, entries, raffleName, raffleId, progressiveDrawDate) {
     const sourceHTML = fs.readFileSync(`${__dirname}/templates/ticket.handlebars`).toString();
     const templateHTML = Handlebars.compile(sourceHTML);
-    const contact = 'mailto:support@nh5050.com';
-    const terms = `${config.frontendUrl}/terms`;
+    const contact = 'mailto:raffles@seacoastmarines.org';
+    const contactEmail = 'raffles@seacoastmarines.org';
+    const terms = 'https://www.seacoastmarines.org/raffle-rules/terms-conditions/';
     let entriesArr = [];
     entries.forEach((entry) => entriesArr.push({
       id: this.addLeadingZeros(entry.id, 5),
       ticketId: this.addLeadingZeros(entry.ticket_sales_id, 4),
       raffleId: this.addLeadingZeros(raffleId, 2)
     }));
-    const resultHtml = templateHTML({firstname, entriesArr, raffleName, raffleId, contact, terms});
+    const progressiveDate = moment(progressiveDrawDate).format('MMMM Do, YYYY [at] hh:mm a');
+    const resultHtml = templateHTML({firstname, entriesArr, raffleName, raffleId, contact, contactEmail, terms, progressiveDate});
 
     const options = {
       to: email,
