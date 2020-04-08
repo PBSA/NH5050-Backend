@@ -269,7 +269,7 @@ class RaffleValidator extends BaseValidator {
 
   addBundle() {
     const bodySchema = {
-      quantity: Joi.number().integer().min(1).max(1000000).required(),
+      quantity: Joi.number().integer().min(1).max(1000000).required().max(98),
       price: Joi.number().precision(2).min(0.50).max(999999.99).required(),
       raffle_id: Joi.number().integer().required()
     };
