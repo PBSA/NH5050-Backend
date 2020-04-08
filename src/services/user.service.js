@@ -106,10 +106,6 @@ class UserService {
 
     await this.createPeerplaysAccountForUser(user);
 
-    if (newUser.is_email_allowed) {
-      await this.mailService.sendMailAfterRegistration(firstname, email);
-    }
-
     return this.getCleanUser(user);
   }
 
