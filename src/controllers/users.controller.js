@@ -197,9 +197,32 @@ export default class UsersController {
        *        schema:
        *          $ref: '#/definitions/ValidateError'
        */
-      ['post', '/api/v1/users/login',
-      this.authValidator.validateSignIn,
-      this.signIn.bind(this)],
+      [
+        'post', '/api/v1/users/login',
+        this.authValidator.validateSignIn,
+        this.signIn.bind(this)
+      ],
+      /**
+       * @swagger
+       *
+       * /users/logout:
+       *  post:
+       *    description: Log out the user
+       *    consumes:
+       *    - application/json
+       *    produces:
+       *    - application/json
+       *    tags:
+       *    - developers
+       *    - users
+       *    responses:
+       *      200:
+       *        description: Log out success
+       */
+      [
+        'post', '/api/v1/users/logout',
+        this.signOut.bind(this)
+      ]
     ];
   }
 
@@ -244,6 +267,11 @@ export default class UsersController {
 
     await new Promise((success) => req.login(user, () => success()));
     return user;
+  }
+
+  signOut(user, params, req) {
+    req.logout();
+    return true;
   }
 
 }
