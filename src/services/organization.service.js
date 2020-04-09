@@ -6,6 +6,7 @@ import RaffleRepository from '../repositories/raffle.repository';
 import UserRepository from '../repositories/user.repository';
 import UserService from '../services/user.service';
 import FileService from './file.service';
+import {paymentStatus} from '../constants/sale';
 
 import {userType} from '../constants/profile';
 import {organizationType} from '../constants/organization';
@@ -94,21 +95,22 @@ export default class OrganizationService {
     return Promise.all(beneficiaries.map(async (beneficiary) => {
       const totalSales = await this.salesRepository.model.findAll({
         where: {
-          beneficiary_id: beneficiary.user_id
+          beneficiary_id: beneficiary.id,
+          payment_status: paymentStatus.success
         },
         attributes: [
-          [sequelize.literal('SUM(total_price * raffle.beneficiary_percent)'), 'total_sum']
+          [sequelize.literal('SUM(total_price * raffle.beneficiary_percent / 100)'), 'total_sum']
         ],
         include: [{
           model: this.raffleRepository.model,
           as: 'raffle',
           attributes: ['beneficiary_percent']
         }],
-        group: ['sales.id', 'raffle.id'],
+        group: ['sales.id','raffle.id'],
         raw: true
       });
 
-      const totalFunds = totalSales.reduce((acc, sale) => sale.total_sum + acc, 0.0);
+      const totalFunds = totalSales.reduce((acc, sale) => sale.total_sum + acc, 0.0).toFixed(2);
 
       return {
         ...beneficiary.get({plain: true}),
