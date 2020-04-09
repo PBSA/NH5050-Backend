@@ -30,15 +30,14 @@ class MailService {
     await this.smtpConnection.sendMail(options);
   }
 
-  async sendWinnerMail(firstname, email, raffleName, raffleDateTime, amount, progressiveJackpot, progressiveDrawDate) {
+  async sendWinnerMail(firstname, email, raffleName, amount, progressiveDrawDate, organizationName) {
     const sourceHTML = fs.readFileSync(`${__dirname}/templates/winner.handlebars`).toString();
     const templateHTML = Handlebars.compile(sourceHTML);
     const contact = 'mailto:raffles@seacoastmarines.org';
     const terms = 'https://www.seacoastmarines.org/raffle-rules/terms-conditions/';
-    const raffleDate = moment(raffleDateTime).format('MMMM Do, YYYY');
-    const progressiveDate = moment(progressiveDrawDate).format('MMMM Do');
-    const progressiveTime = moment(progressiveDrawDate).format('hh:mm a');
-    const resultHtml = templateHTML({firstname, amount, contact, raffleName, raffleDate, progressiveJackpot, progressiveDate, progressiveTime, terms});
+    const progressiveDate = moment(progressiveDrawDate).local().format('MMMM Do [at] hh:mm a');
+    const frontendUrl = config.frontendUrl;
+    const resultHtml = templateHTML({firstname, amount, contact, raffleName, frontendUrl, terms, organizationName});
 
     const options = {
       to: email,
@@ -49,7 +48,7 @@ class MailService {
     await this.smtpConnection.sendMail(options);
   }
 
-  async sendTicketPurchaseConfirmation(firstname, email, entries, raffleName, raffleId, progressiveDrawDate) {
+  async sendTicketPurchaseConfirmation(firstname, email, entries, raffleName, raffleId, progressiveDrawDate, organizationName) {
     const sourceHTML = fs.readFileSync(`${__dirname}/templates/ticket.handlebars`).toString();
     const templateHTML = Handlebars.compile(sourceHTML);
     const contact = 'mailto:raffles@seacoastmarines.org';
@@ -61,8 +60,8 @@ class MailService {
       ticketId: this.addLeadingZeros(entry.ticket_sales_id, 4),
       raffleId: this.addLeadingZeros(raffleId, 2)
     }));
-    const progressiveDate = moment(progressiveDrawDate).format('MMMM Do, YYYY [at] hh:mm a');
-    const resultHtml = templateHTML({firstname, entriesArr, raffleName, raffleId, contact, contactEmail, terms, progressiveDate});
+    const progressiveDate = moment(progressiveDrawDate).local().format('MMMM Do, YYYY [at] hh:mm a');
+    const resultHtml = templateHTML({firstname, entriesArr, raffleName, raffleId, contact, contactEmail, terms, organizationName});
 
     const options = {
       to: email,

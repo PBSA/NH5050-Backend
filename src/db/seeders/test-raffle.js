@@ -18,29 +18,30 @@ module.exports = {
       updatedAt: new Date()
     }]);
 
-    await queryInterface.bulkInsert('organizations', [{
-      id: 2,
-      name: 'test beneficiary',
-      type: 'beneficiary',
-      address_line1: 'address',
-      city: 'city',
-      state: 'state',
-      country: 'us',
-      zip: 'zip',
-      time_format: '12h',
-      logo_url: 'https://example.com/logo.png',
-      website_url: 'https://example.com',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }]);
+    for (let beneficiaryId = 2; beneficiaryId <= 5; beneficiaryId++) {
+      await queryInterface.bulkInsert('organizations', [{
+        id: beneficiaryId,
+        name: `test beneficiary ${beneficiaryId}`,
+        type: 'beneficiary',
+        address_line1: 'address',
+        city: 'city',
+        state: 'state',
+        country: 'us',
+        zip: 'zip',
+        time_format: '12h',
+        logo_url: 'https://example.com/logo.png',
+        website_url: 'https://example.com',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }]);
 
-    await queryInterface.bulkInsert('beneficiaries', [{
-      id: 1,
-      user_id: 2,
-      organization_id: 1,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }]);
+      await queryInterface.bulkInsert('beneficiaries', [{
+        user_id: beneficiaryId,
+        organization_id: 1,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }]);
+    }
 
     await queryInterface.bulkInsert('users', [{
       id: 1,
@@ -68,12 +69,12 @@ module.exports = {
       draw_datetime: '2020-05-01T12:10:26.573Z',
       draw_type: 'progressive',
       progressive_draw_id: null,
-      admin_fees_percent: 0,
-      donation_percent: 0,
-      raffle_draw_percent: 0,
-      progressive_draw_percent: 0,
-      organization_percent: 0,
-      beneficiary_percent: 0,
+      admin_fees_percent: 0.1,
+      donation_percent: 0.1,
+      raffle_draw_percent: 0.1,
+      progressive_draw_percent: 0.1,
+      organization_percent: 0.1,
+      beneficiary_percent: 0.1,
       peerplays_draw_id: 1,
       image_url: 'https://example.com/raffle.png',
       createdAt: new Date(),
@@ -105,7 +106,7 @@ module.exports = {
         player_id: playerId,
         ticketbundle_id: null,
         total_price: Math.floor(Math.random() * 10),
-        beneficiary_id: null,
+        beneficiary_id: 2 + Math.floor(Math.random() * 3),
         seller_id: 1,
         stripe_payment_id: null,
         payment_type: 'cash',

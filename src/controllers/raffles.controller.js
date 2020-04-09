@@ -511,7 +511,7 @@ export default class RafflesController {
 
   async addRaffle(user, data) {
     try{
-      return await this.raffleService.addRaffle(user, data);
+      return await this.raffleService.addRaffle(data);
     } catch(e) {
       if (e.message === this.raffleService.errors.INSUFFICIENT_BALANCE || e.message === this.raffleService.errors.PEERPLAYS_ACCOUNT_MISSING) {
         throw new RestError(e.message, 404);
