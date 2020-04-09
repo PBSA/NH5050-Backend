@@ -105,7 +105,7 @@ module.exports = {
         player_id: playerId,
         ticketbundle_id: null,
         total_price: Math.floor(Math.random() * 10),
-        beneficiary_id: null,
+        beneficiary_id: 2,
         seller_id: 1,
         stripe_payment_id: null,
         payment_type: 'cash',
