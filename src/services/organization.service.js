@@ -1,6 +1,8 @@
 
 import OrganizationRepository from '../repositories/organization.repository';
 import BeneficiaryRepository from '../repositories/beneficiary.repository';
+import SalesRepository from '../repositories/sale.repository';
+import RaffleRepository from '../repositories/raffle.repository';
 import UserRepository from '../repositories/user.repository';
 import UserService from '../services/user.service';
 import FileService from './file.service';
@@ -16,6 +18,8 @@ export default class OrganizationService {
   constructor(conns) {
     this.organizationRepository = new OrganizationRepository();
     this.beneficiaryRepository = new BeneficiaryRepository();
+    this.salesRepository = new SalesRepository();
+    this.raffleRepository = new RaffleRepository();
     this.userRepository = new UserRepository();
     this.userService = new UserService(conns);
     this.fileService = new FileService(conns);
@@ -87,12 +91,31 @@ export default class OrganizationService {
       }]
     });
 
-    return beneficiaries.map(beneficiary => {
+    return Promise.all(beneficiaries.map(async (beneficiary) => {
+      const totalSales = await this.salesRepository.model.findAll({
+        where: {
+          beneficiary_id: beneficiary.user_id
+        },
+        attributes: [
+          [sequelize.literal('SUM(total_price * raffle.beneficiary_percent)'), 'total_sum']
+        ],
+        include: [{
+          model: this.raffleRepository.model,
+          as: 'raffle',
+          attributes: ['beneficiary_percent']
+        }],
+        group: ['sales.id', 'raffle.id'],
+        raw: true
+      });
+
+      const totalFunds = totalSales.reduce((acc, sale) => sale.total_sum + acc, 0.0);
+
       return {
         ...beneficiary.get({plain: true}),
-        user: beneficiary.user.getPublic()
+        user: beneficiary.user.getPublic(),
+        total_funds: totalFunds
       };
-    });
+    }));
   }
 
   createOrUpdateBeneficiary(organizationId, beneficiaryData) {
