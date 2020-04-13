@@ -192,7 +192,25 @@ export default class OrganizationService {
       }
     });
 
-    return sellers.map(seller => seller.getPublic());
+    return Promise.all(sellers.map(async (seller) => {
+      const [{total_funds, sales_count}] = await this.salesRepository.model.findAll({
+        where: {
+          seller_id: seller.id,
+          payment_status: paymentStatus.success
+        },
+        attributes: [
+          [sequelize.fn('sum', sequelize.col('total_price')), 'total_funds'],
+          [sequelize.fn('count', sequelize.col('id')), 'sales_count']
+        ],
+        raw: true
+      });
+
+      return {
+        ...seller.getPublic(),
+        total_funds: (total_funds || 0).toFixed(2),
+        sales_count: sales_count
+      };
+    }));
   }
 
   createOrUpdateSeller(organizationId, sellerData) {
