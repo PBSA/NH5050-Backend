@@ -13,7 +13,13 @@
     "paymentAccountID": "PEERPLAYS_PAYMENT_ACCOUNT_ID",
     "paymentAccountWIF": "PEERPLAYS_PAYMENT_ACCOUNT_WIF",
     "paymentReceiver": "PEERPLAYS_PAYMENT_RECEIVER",
-    "peerplaysWS": "PEERPLAYS_WS"
+    "peerplaysWS": "PEERPLAYS_WS",
+    "paymentReceiverWIF": "PAYMENT_RECEIVER_WIF",
+    "ticketPrice": "TICKET_PRICE",
+    "ticketAssetID": "TICKET_ASSET_ID",
+    "maxTicketSupply": "MAX_TICKET_SUPPLY",
+    "peerplaysFaucetURL": "PEERPLAYS_FAUCET",
+    "referrer": "PEERPLAYS_REFERRER"
   },
   "mailer": {
     "host": "MAILER_HOST",
