@@ -36,6 +36,7 @@ module.exports = {
       }]);
 
       await queryInterface.bulkInsert('beneficiaries', [{
+        id: beneficiaryId - 1,
         user_id: beneficiaryId,
         organization_id: 1,
         createdAt: new Date(),
@@ -57,6 +58,23 @@ module.exports = {
       createdAt: new Date(),
       updatedAt: new Date()
     }]);
+
+    for (let sellerId = 2; sellerId <= 5; sellerId++) {
+      await queryInterface.bulkInsert('users', [{
+        id: sellerId,
+        email: `seller_${sellerId}@example.com`,
+        password: await bcrypt.hash('1234', 10),
+        mobile: `0123456789-${sellerId}`,
+        firstname: 'firstname',
+        lastname: 'lastname',
+        is_email_allowed: false,
+        organization_id: 1,
+        status: 'active',
+        user_type: 'seller',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }])
+    }
 
     await queryInterface.bulkInsert('raffles', [{
       id: 1,
@@ -84,7 +102,7 @@ module.exports = {
     let nextEntryId = 1;
 
     for (let i = 1; i < 1000; i++) {
-      const playerId = i + 1;
+      const playerId = 6 + i;
 
       await queryInterface.bulkInsert('users', [{
         id: playerId,
@@ -106,10 +124,11 @@ module.exports = {
         player_id: playerId,
         ticketbundle_id: null,
         total_price: Math.floor(Math.random() * 10),
-        beneficiary_id: 2 + Math.floor(Math.random() * 3),
-        seller_id: 1,
+        beneficiary_id: 1 + Math.floor(Math.random() * 3),
+        seller_id: 2 + Math.floor(Math.random() * 3),
         stripe_payment_id: null,
         payment_type: 'cash',
+        payment_status: 'success',
         createdAt: new Date(),
         updatedAt: new Date()
       }]);
