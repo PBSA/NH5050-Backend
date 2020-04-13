@@ -112,7 +112,7 @@ export default class RaffleService {
     }));
   }
 
-  async addRaffle(user, newRaffle) {
+  async addRaffle(newRaffle) {
     if(newRaffle.id) {
       const raffleExists = await this.raffleRepository.findByPk(newRaffle.id);
 
@@ -122,20 +122,9 @@ export default class RaffleService {
       return raffleExists.getPublic();
     }
 
-    if(!user.peerplays_account_name || !user.peerplays_master_password) {
-      throw new Error(this.errors.PEERPLAYS_ACCOUNT_MISSING);
-    }
-
-    const keys = Login.generateKeys(
-      user.peerplays_account_name,
-      user.peerplays_master_password,
-      ['active'],
-      IS_PRODUCTION ? 'PPY' : 'TEST'
-    );
-
     let lotteryResult;
     try{
-      lotteryResult = await this.peerplaysRepository.createLottery(user.peerplays_account_id, newRaffle.raffle_name, newRaffle.raffle_description, newRaffle.draw_datetime, keys.privKeys.active);
+      lotteryResult = await this.peerplaysRepository.createLottery(newRaffle.raffle_name, newRaffle.raffle_description, newRaffle.draw_datetime);
     }catch(e) {
       console.error(e);
 
@@ -374,6 +363,8 @@ export default class RaffleService {
       throw e;
     }
 
+    const normalLotteries = await this.peerplaysRepository.getUserLotteries(player.peerplays_account_id);
+
     try{
       await this.transferFromPlayerToEscrow(bundle.price, bundle.raffle_id, player.peerplays_account_id, player.peerplays_account_name, player.peerplays_master_password);
     } catch(e) {
@@ -402,9 +393,9 @@ export default class RaffleService {
       }
     }
 
-    const userLotteries = await this.peerplaysRepository.getUserLotteries(player.peerplays_account_id);
-    const normalBlockchainEntries = userLotteries.filter((lottery) => lottery.op[1].lottery === bundle.raffle.peerplays_draw_id);
-    const progressiveBlockchainEntries = userLotteries.filter((lottery) => lottery.op[1].lottery === progressiveRaffle.peerplays_draw_id);
+    const progressiveLotteries = await this.peerplaysRepository.getUserLotteries(player.peerplays_account_id);
+    const normalBlockchainEntries = normalLotteries.filter((lottery) => lottery.op[1].lottery === bundle.raffle.peerplays_draw_id).sort((a,b) => Number(b.id.split('.')[2]) - Number(a.id.split('.')[2]));
+    const progressiveBlockchainEntries = progressiveLotteries.filter((lottery) => lottery.op[1].lottery === progressiveRaffle.peerplays_draw_id).sort((a,b) => Number(b.id.split('.')[2]) - Number(a.id.split('.')[2]));
 
     let Entries = [];
 
@@ -418,7 +409,8 @@ export default class RaffleService {
     }
 
     if(player.is_email_allowed && progressiveRaffle) {
-      await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.raffle.raffle_name, bundle.raffle_id, progressiveRaffle.draw_datetime);
+      const organization = await this.organizationRepository.findByPk(bundle.raffle.organization_id);
+      await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.raffle.raffle_name, bundle.raffle_id, progressiveRaffle.draw_datetime, organization.name);
     }
 
     const beneficiary = await this.beneficiaryRepository.findByPk(Sale[0].beneficiary_id, {
@@ -734,16 +726,41 @@ export default class RaffleService {
           continue;
         }
 
-        const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
-        console.log('draw id: ' + pendingRaffles[i].id + ' draw type: ' + pendingRaffles[i].draw_type + ' ' + winningTicketPosition + ' userEntriesLength: ' + userEntries.length);
-        pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
+        if(winner.op[1].hasOwnProperty('winner_ticket_id') && winner.op[1].winner_ticket_id[1] !== 0) {
+          let winningWhereClause = {
+            where: {
+              peerplays_raffle_ticket_id: `1.11.${winner.op[1].winner_ticket_id[1]}`
+            }
+          };
+
+          if(pendingRaffles[i].draw_type === raffleConstants.drawType.progressive) {
+            winningWhereClause = {
+              where: {
+                peerplays_progressive_ticket_id: `1.11.${winner.op[1].winner_ticket_id[1]}`
+              }
+            };
+          }
+
+          const winning_entry = await this.entryRepository.findAll(winningWhereClause);
+          if(winning_entry.length > 0) {
+            pendingRaffles[i].winning_entry_id = winning_entry[0].id;
+          }else {
+            const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+            pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
+          }
+        }else {
+          const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+          pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
+        }
+
         await pendingRaffles[i].save();
 
         await this.distributeWinnerAmount(user.peerplays_account_id, user.peerplays_account_name, user.peerplays_master_password, amounts.total_jackpot, pendingRaffles[i].id);
 
         if(user.is_email_allowed) {
-          const progressiveRaffle = this.raffleRepository.findByPk(pendingRaffles[i].progressive_draw_id);
-          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, pendingRaffles[i].draw_datetime, amounts.total_jackpot, amounts.total_progressive_jackpot, progressiveRaffle.draw_datetime);
+          const progressiveRaffle = await this.raffleRepository.findByPk(pendingRaffles[i].draw_type === raffleConstants.drawType.progressive ? pendingRaffles[i].id : pendingRaffles[i].progressive_draw_id);
+          const org = await this.organizationRepository.findByPk(pendingRaffles[i].organization_id);
+          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, amounts.total_jackpot, progressiveRaffle.draw_datetime, org.name);
         }
 
         if(pendingRaffles[i].draw_type !== raffleConstants.drawType.progressive) {
