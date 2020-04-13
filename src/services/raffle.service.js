@@ -21,6 +21,7 @@ const MailService = require('../services/mail.service');
 const FileService = require('../services/file.service').default;
 const RestError = require('../errors/rest.error');
 const ValidateError = require('../errors/validate.error');
+const sequelize = require('../db/index').sequelize;
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const CDN_URL = config.get('cdnUrl');
@@ -63,7 +64,12 @@ export default class RaffleService {
       throw new Error(this.errors.NOT_FOUND);
     }
 
-    const amounts = await this.calculateAmounts(raffle);
+    let amounts;
+    if(raffle.draw_type === raffleConstants.drawType.progressive) {
+      amounts = await this.calculateProgressiveAmounts(raffle.id);
+    } else {
+      amounts = await this.calculateAmounts(raffle);
+    }
 
     return {
       ...raffle.getPublic(),
@@ -104,12 +110,59 @@ export default class RaffleService {
     const raffles = await this.raffleRepository.findRafflesByOrganizationId(organizationId);
 
     return Promise.all(raffles.map(async (raffle) => {
-      const amounts = await this.calculateAmounts(raffle);
+      let amounts;
+      let totalEntries;
+
+      if(raffle.draw_type === raffleConstants.drawType.progressive) {
+        amounts = await this.calculateProgressiveAmounts(raffle.id);
+        totalEntries = await this.getTotalEntriesForProgressiveRaffle(raffle.id);
+      } else {
+        amounts = await this.calculateAmounts(raffle);
+        totalEntries = await this.getTotalEntriesForRaffle(raffle.id);
+      }
+
       return {
         ...raffle.getPublic(),
-        ...amounts
+        ...amounts,
+        total_entries: totalEntries
       };
     }));
+  }
+
+  async getTotalEntriesForRaffle(raffle_id) {
+    const [entries] = await this.entryRepository.model.findAll({
+      where: {
+        '$sale.raffle_id$': raffle_id,
+        '$sale.payment_status$': saleConstants.paymentStatus.success
+      },
+      attributes: [
+        [sequelize.fn('count', sequelize.col('entries.id')), 'entries_count']
+      ],
+      include: [{
+        model: this.saleRepository.model,
+        as: 'sale',
+        attributes: ['raffle_id','payment_status']
+      }],
+      group: ['sale.payment_status','sale.raffle_id'],
+      raw: true
+    });
+
+    return entries ? +entries.entries_count : 0;
+  }
+
+  async getTotalEntriesForProgressiveRaffle(raffle_id) {
+    const raffles = await this.raffleRepository.model.findAll({
+      where: {
+        progressive_draw_id: raffle_id
+      }
+    });
+    
+    let count = 0;
+    for( let i = 0; i < raffles.length; i++ ) {
+      count += await this.getTotalEntriesForRaffle(raffles[i].id);
+    }
+
+    return count;
   }
 
   async addRaffle(newRaffle) {
