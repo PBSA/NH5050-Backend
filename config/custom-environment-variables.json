@@ -17,7 +17,9 @@
     "paymentReceiverWIF": "PAYMENT_RECEIVER_WIF",
     "ticketPrice": "TICKET_PRICE",
     "ticketAssetID": "TICKET_ASSET_ID",
-    "maxTicketSupply": "MAX_TICKET_SUPPLY"
+    "maxTicketSupply": "MAX_TICKET_SUPPLY",
+    "peerplaysFaucetURL": "PEERPLAYS_FAUCET",
+    "referrer": "PEERPLAYS_REFERRER"
   },
   "mailer": {
     "host": "MAILER_HOST",
