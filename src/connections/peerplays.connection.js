@@ -131,26 +131,13 @@ class PeerplaysConnection extends BaseConnection {
   }
 
   async getUserLotteries(peerplaysAccountId) {
-    const res = await this.historyAPI.exec('get_account_history',[peerplaysAccountId,'1.11.0',1,'1.11.0']);
-    let start = 0;
-    let end = res.length > 0 ? Number(res[0].id.split('.')[2]) : 0;
-    let lotteries = [];
+    const result = await this.historyAPI.exec('get_account_history',[peerplaysAccountId,'1.11.0',100,'1.11.0']);
 
-    while(start < end) {
-      let result = await this.historyAPI.exec('get_account_history',[peerplaysAccountId,`1.11.${start}`,100,`1.11.${start + 100}`]);
+    const histories = result.filter((history) => {
+      return history.op[0] === 78;
+    });
 
-      start += 100;
-
-      const histories = result.filter((history) => {
-        return history.op[0] === 78;
-      });
-
-      if(histories.length > 0) {
-        lotteries.push(...histories);
-      }
-    }
-
-    return lotteries;
+    return histories;
   }
 
   disconnect() {
