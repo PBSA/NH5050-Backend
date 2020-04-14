@@ -4,6 +4,7 @@ const config = require('config');
 const stripe = require('stripe')(config.stripe.secretKey);
 const {Op} = require('sequelize');
 const json2csv = require('json2csv');
+const path = require('path');
 
 const RaffleRepository = require('../repositories/raffle.repository');
 const BundleRepository = require('../repositories/bundle.repository');
