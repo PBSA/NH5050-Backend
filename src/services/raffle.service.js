@@ -4,6 +4,7 @@ const config = require('config');
 const stripe = require('stripe')(config.stripe.secretKey);
 const {Op} = require('sequelize');
 const json2csv = require('json2csv');
+const path = require('path');
 
 const RaffleRepository = require('../repositories/raffle.repository');
 const BundleRepository = require('../repositories/bundle.repository');
@@ -720,7 +721,10 @@ export default class RaffleService {
 
   async resolveRaffles() {
     const pendingRaffles = await this.raffleRepository.findPendingRaffles();
-    const winners = await this.peerplaysRepository.getWinners();
+    //Find the lowest lottery id in the db so that we don't have to start looping from 1.11.0
+    const entries = await this.entryRepository.findAll();
+    const start = entries.reduce((min, currentValue) => { return min < +currentValue.peerplays_raffle_ticket_id.split('.')[2] ? min : +currentValue.peerplays_raffle_ticket_id.split('.')[2]});
+    const winners = await this.peerplaysRepository.getWinners(start);
 
     for(let i = 0; i < pendingRaffles.length; i++) {
       const winner = winners.find((winner) => winner.op[1].lottery === pendingRaffles[i].peerplays_draw_id);
