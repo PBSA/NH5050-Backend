@@ -251,7 +251,12 @@ export default class OrganizationsController {
        *      name: organizationId
        *      description: pass the id of the organization
        *      required: true
-       *      type: string
+       *      type: integer
+       *    - in: query
+       *      name: raffleId
+       *      description: filter sales by the given raffle id
+       *      required: false
+       *      type: integer
        *    responses:
        *      200:
        *        description: list of sellers
@@ -281,7 +286,7 @@ export default class OrganizationsController {
       [
         'get', '/api/v1/organization/sellers',
         this.authValidator.loggedAdminOnly,
-        this.organizationValidator.validateOrganizationId,
+        this.organizationValidator.validateGetSellers,
         this.getSellers.bind(this)
       ],
       /**
@@ -498,13 +503,13 @@ export default class OrganizationsController {
     }
   }
 
-  async getSellers(user, organizationId) {
+  async getSellers(user, {organizationId, raffleId}) {
     if (organizationId !== user.organization_id) {
       throw new RestError(`User does not belong to organization "${organizationId}"`,403);
     }
 
     try {
-      return await this.organizationService.getSellers(organizationId);
+      return await this.organizationService.getSellers(organizationId, raffleId);
     } catch (e) {
       if (e.message === this.organizationService.errors.NOT_FOUND) {
         throw new RestError(e.message, 404);
