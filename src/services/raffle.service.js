@@ -464,7 +464,7 @@ export default class RaffleService {
 
     if(player.is_email_allowed && progressiveRaffle) {
       const organization = await this.organizationRepository.findByPk(bundle.raffle.organization_id);
-      await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.raffle.raffle_name, bundle.raffle_id, progressiveRaffle.draw_datetime, organization.name);
+      await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.price, bundle.raffle.raffle_name, bundle.raffle_id, progressiveRaffle.draw_datetime, organization.name);
     }
 
     const beneficiary = await this.beneficiaryRepository.findByPk(Sale[0].beneficiary_id, {
