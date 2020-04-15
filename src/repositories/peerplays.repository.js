@@ -251,8 +251,8 @@ class PeerplaysRepository {
     return result;
   }
 
-  async getWinners() {
-    return this.peerplaysConnection.getLotteryWinners();
+  async getWinners(start) {
+    return this.peerplaysConnection.getLotteryWinners(start);
   }
 
   async getUserLotteries(peerplaysAccountId) {
