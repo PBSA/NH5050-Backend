@@ -184,7 +184,7 @@ export default class OrganizationService {
     }
   }
 
-  async getSellers(organizationId) {
+  async getSellers(organizationId, raffleId) {
     const sellers = await this.userRepository.model.findAll({
       where: {
         organization_id: organizationId,
@@ -193,11 +193,17 @@ export default class OrganizationService {
     });
 
     return Promise.all(sellers.map(async (seller) => {
+      const where = {
+        seller_id: seller.id,
+        payment_status: paymentStatus.success
+      };
+
+      if (raffleId) {
+        where.raffleId = raffleId;
+      }
+
       const [{total_funds, sales_count}] = await this.salesRepository.model.findAll({
-        where: {
-          seller_id: seller.id,
-          payment_status: paymentStatus.success
-        },
+        where,
         attributes: [
           [sequelize.fn('sum', sequelize.col('total_price')), 'total_funds'],
           [sequelize.fn('count', sequelize.col('id')), 'sales_count']
