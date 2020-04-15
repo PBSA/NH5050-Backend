@@ -68,7 +68,7 @@ class MailService {
     const options = {
       to: email,
       from: config.mailer.sender,
-      subject: `Your tickets for ${organizationName}'s ${raffleName}`,
+      subject: `Your tickets for NH MCL ${raffleName}`,
       html: resultHtml
     };
     await this.smtpConnection.sendMail(options);
