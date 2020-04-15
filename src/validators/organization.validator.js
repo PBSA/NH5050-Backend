@@ -12,6 +12,7 @@ export default class OrganizationValidator extends BaseValidator {
     this.organizationRepository = new OrganizationRepository();
 
     this.validateOrganizationId = this.validateOrganizationId.bind(this);
+    this.validateGetSellers = this.validateGetSellers.bind(this);
     this.validateOrganization = this.validateOrganization.bind(this);
   }
 
@@ -21,6 +22,18 @@ export default class OrganizationValidator extends BaseValidator {
     };
 
     return this.validate(querySchema, null, (req, query) => query.organizationId);
+  }
+
+  validateGetSellers() {
+    const querySchema = {
+      organizationId: Joi.number().integer().required(),
+      raffleId: Joi.number().integer()
+    };
+
+    return this.validate(querySchema, null, (req, query) => ({
+      organizationId: query.organizationId,
+      raffleId: query.raffleId
+    }));
   }
 
   validateOrganization() {
