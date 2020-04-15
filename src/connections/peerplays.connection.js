@@ -107,10 +107,10 @@ class PeerplaysConnection extends BaseConnection {
     });
   }
 
-  async getLotteryWinners() {
+  async getLotteryWinners(startNum) {
     const res = await this.historyAPI.exec('get_account_history',['1.2.0','1.11.0',1,'1.11.0']);
-    let start = 0;
-    let end = res.length > 0 ? Number(res[0].id.split('.')[2]) : 0;
+    let start = startNum;
+    let end = res.length > 0 ? +res[0].id.split('.')[2] : 0;
     let winners = [];
 
     while(start < end) {
