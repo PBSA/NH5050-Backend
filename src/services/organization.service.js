@@ -40,7 +40,29 @@ export default class OrganizationService {
       throw new Error(this.errors.NOT_FOUND);
     }
 
-    return org.getPublic();
+    const totalSales = await this.salesRepository.model.findAll({
+      where: {
+        '$raffle.organization_id$': id,
+        payment_status: paymentStatus.success
+      },
+      attributes: [
+        [sequelize.literal('SUM(total_price * raffle.organization_percent / 100)'), 'total_sum']
+      ],
+      include: [{
+        model: this.raffleRepository.model,
+        as: 'raffle',
+        attributes: ['organization_id','organization_percent']
+      }],
+      group: ['raffle.organization_id','raffle.organization_percent'],
+      raw: true
+    });
+
+    const totalFunds = totalSales.reduce((acc, sale) => sale.total_sum + acc, 0.0).toFixed(2);
+
+    return {
+      ...org.getPublic(),
+      total_funds: totalFunds
+    };
   }
 
   async createOrUpdateOrganization(user, organizationData) {
