@@ -257,7 +257,7 @@ export default class RaffleService {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
         const SaleExists = await this.saleRepository.findSaleByStripePaymentId(paymentIntent.id);
-        if(SaleExists.length > 0 && SaleExists.payment_status !== saleConstants.paymentStatus.success) {
+        if(SaleExists && SaleExists.length > 0 && SaleExists.payment_status !== saleConstants.paymentStatus.success) {
           await this.processPurchase(SaleExists[0].get({plain: true}));
         }
         break;
@@ -721,6 +721,10 @@ export default class RaffleService {
 
   async resolveRaffles() {
     const pendingRaffles = await this.raffleRepository.findPendingRaffles();
+    if(!pendingRaffles || pendingRaffles.length === 0) {
+      return true;
+    }
+
     //Find the lowest lottery id in the db so that we don't have to start looping from 1.11.0
     const entries = await this.entryRepository.findAll();
     const start = entries.reduce((min, currentValue) => { return min < +currentValue.peerplays_raffle_ticket_id.split('.')[2] ? min : +currentValue.peerplays_raffle_ticket_id.split('.')[2]});
