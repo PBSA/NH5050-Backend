@@ -823,6 +823,8 @@ export default class RaffleService {
           await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, amounts.total_jackpot, org.name);
         }
 
+        this.sendParticipantEmails(pendingRaffles[i], user);
+
         if(pendingRaffles[i].draw_type !== raffleConstants.drawType.progressive) {
           await this.distributeBeneficiaryAndAdminAmount(amounts, pendingRaffles[i].organization_id, pendingRaffles[i].id);
         }
@@ -830,6 +832,34 @@ export default class RaffleService {
     }
 
     return true;
+  }
+
+  async sendParticipantEmails(raffle, winner) {
+    let sales = await this.saleRepository.model.findAll({
+      where: {
+        raffle_id: raffle.id,
+      },
+      include: [{
+        where: {
+          id: {
+            [Op.not]: winner.id
+          }
+        },
+        model: this.userRepository.model,
+        as: 'player',
+        attributes: ['email']
+      }]
+    });
+
+    sales = sales.map(sale => sale.player.email);
+    sales = [...new Set(sales)];
+
+    for (let i = 0; i < sales.length; i+=50) {
+      await this.mailService.sendParticipantEmail(sales.slice(i, i + 50), winner.firstname, raffle.raffle_name);
+
+      // sleep for 100 ms
+      await new Promise(resolve => setTimeout(resolve, 100.0));
+    }
   }
 
   async calculateProgressiveAmounts(raffle_id) {
