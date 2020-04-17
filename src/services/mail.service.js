@@ -60,12 +60,12 @@ class MailService {
     await this.smtpConnection.sendMail(options);
   }
 
-  async sendParticipantEmail(winnerName, email, raffleName) {
+  async sendParticipantEmail(emails, winnerName, raffleName) {
     const frontendUrl = config.frontendUrl;
     const resultHtml = renderTemplate('participant', {raffleName, winnerName, frontendUrl});
 
     const options = {
-      to: email,
+      bcc: emails.join(','),
       from: config.mailer.sender,
       subject: 'Thank you for supporting the MCL NH Raffle',
       html: resultHtml
