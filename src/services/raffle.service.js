@@ -825,6 +825,8 @@ export default class RaffleService {
 
         this.sendParticipantEmails(pendingRaffles[i], user);
 
+        await this.sendAdminReports(amounts.total_jackpot, pendingRaffles[i], `${user.firstname} ${user.lastname}`)
+
         if(pendingRaffles[i].draw_type !== raffleConstants.drawType.progressive) {
           await this.distributeBeneficiaryAndAdminAmount(amounts, pendingRaffles[i].organization_id, pendingRaffles[i].id);
         }
@@ -859,6 +861,15 @@ export default class RaffleService {
 
       // sleep for 100 ms
       await new Promise(resolve => setTimeout(resolve, 100.0));
+    }
+  }
+
+  async sendAdminReports(raffleAmount, raffle, winnerName) {
+    const admins = await this.userRepository.findOrganizationAdmins(raffle.organization_id);
+
+    const reportUrl = await this.createRaffleReport(raffle.id,{organization_id: raffle.organization_id});
+    for (let i = 0; i < admins.length; i++) {
+      await this.mailService.sendRaffleReportToAdmin(admins[i].firstname, admins[i].email, raffleAmount, raffle.raffle_name, winnerName, reportUrl);
     }
   }
 
