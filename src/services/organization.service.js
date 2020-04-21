@@ -57,7 +57,7 @@ export default class OrganizationService {
       raw: true
     });
 
-    const totalFunds = totalSales.reduce((acc, sale) => sale.total_sum + acc, 0.0).toFixed(2);
+    const totalFunds = (Math.ceil(totalSales.reduce((acc, sale) => sale.total_sum + acc, 0.0) * 100)/100).toFixed(2);
 
     return {
       ...org.getPublic(),
@@ -132,7 +132,7 @@ export default class OrganizationService {
         raw: true
       });
 
-      const totalFunds = totalSales.reduce((acc, sale) => sale.total_sum + acc, 0.0).toFixed(2);
+      const totalFunds = (Math.ceil(totalSales.reduce((acc, sale) => sale.total_sum + acc, 0.0) * 100)/100).toFixed(2);
 
       return {
         ...beneficiary.get({plain: true}),
