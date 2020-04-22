@@ -40,7 +40,29 @@ export default class OrganizationService {
       throw new Error(this.errors.NOT_FOUND);
     }
 
-    return org.getPublic();
+    const totalSales = await this.salesRepository.model.findAll({
+      where: {
+        '$raffle.organization_id$': id,
+        payment_status: paymentStatus.success
+      },
+      attributes: [
+        [sequelize.literal('SUM(total_price * raffle.organization_percent / 100)'), 'total_sum']
+      ],
+      include: [{
+        model: this.raffleRepository.model,
+        as: 'raffle',
+        attributes: ['organization_id','organization_percent']
+      }],
+      group: ['raffle.organization_id','raffle.organization_percent'],
+      raw: true
+    });
+
+    const totalFunds = totalSales.reduce((acc, sale) => sale.total_sum + acc, 0.0).toFixed(2);
+
+    return {
+      ...org.getPublic(),
+      total_funds: totalFunds
+    };
   }
 
   async createOrUpdateOrganization(user, organizationData) {
@@ -184,7 +206,7 @@ export default class OrganizationService {
     }
   }
 
-  async getSellers(organizationId) {
+  async getSellers(organizationId, raffleId) {
     const sellers = await this.userRepository.model.findAll({
       where: {
         organization_id: organizationId,
@@ -192,7 +214,31 @@ export default class OrganizationService {
       }
     });
 
-    return sellers.map(seller => seller.getPublic());
+    return Promise.all(sellers.map(async (seller) => {
+      const where = {
+        seller_id: seller.id,
+        payment_status: paymentStatus.success
+      };
+
+      if (raffleId) {
+        where.raffle_id = raffleId;
+      }
+
+      const [{total_funds, sales_count}] = await this.salesRepository.model.findAll({
+        where,
+        attributes: [
+          [sequelize.fn('sum', sequelize.col('total_price')), 'total_funds'],
+          [sequelize.fn('count', sequelize.col('id')), 'sales_count']
+        ],
+        raw: true
+      });
+
+      return {
+        ...seller.getPublic(),
+        total_funds: (total_funds || 0).toFixed(2),
+        sales_count: sales_count
+      };
+    }));
   }
 
   createOrUpdateSeller(organizationId, sellerData) {

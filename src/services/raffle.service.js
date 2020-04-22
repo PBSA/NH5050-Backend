@@ -4,6 +4,7 @@ const config = require('config');
 const stripe = require('stripe')(config.stripe.secretKey);
 const {Op} = require('sequelize');
 const json2csv = require('json2csv');
+const path = require('path');
 
 const RaffleRepository = require('../repositories/raffle.repository');
 const BundleRepository = require('../repositories/bundle.repository');
@@ -21,6 +22,7 @@ const MailService = require('../services/mail.service');
 const FileService = require('../services/file.service').default;
 const RestError = require('../errors/rest.error');
 const ValidateError = require('../errors/validate.error');
+const sequelize = require('../db/index').sequelize;
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const CDN_URL = config.get('cdnUrl');
@@ -63,7 +65,12 @@ export default class RaffleService {
       throw new Error(this.errors.NOT_FOUND);
     }
 
-    const amounts = await this.calculateAmounts(raffle);
+    let amounts;
+    if(raffle.draw_type === raffleConstants.drawType.progressive) {
+      amounts = await this.calculateProgressiveAmounts(raffle.id);
+    } else {
+      amounts = await this.calculateAmounts(raffle);
+    }
 
     return {
       ...raffle.getPublic(),
@@ -104,12 +111,59 @@ export default class RaffleService {
     const raffles = await this.raffleRepository.findRafflesByOrganizationId(organizationId);
 
     return Promise.all(raffles.map(async (raffle) => {
-      const amounts = await this.calculateAmounts(raffle);
+      let amounts;
+      let totalEntries;
+
+      if(raffle.draw_type === raffleConstants.drawType.progressive) {
+        amounts = await this.calculateProgressiveAmounts(raffle.id);
+        totalEntries = await this.getTotalEntriesForProgressiveRaffle(raffle.id);
+      } else {
+        amounts = await this.calculateAmounts(raffle);
+        totalEntries = await this.getTotalEntriesForRaffle(raffle.id);
+      }
+
       return {
         ...raffle.getPublic(),
-        ...amounts
+        ...amounts,
+        total_entries: totalEntries
       };
     }));
+  }
+
+  async getTotalEntriesForRaffle(raffle_id) {
+    const [entries] = await this.entryRepository.model.findAll({
+      where: {
+        '$sale.raffle_id$': raffle_id,
+        '$sale.payment_status$': saleConstants.paymentStatus.success
+      },
+      attributes: [
+        [sequelize.fn('count', sequelize.col('entries.id')), 'entries_count']
+      ],
+      include: [{
+        model: this.saleRepository.model,
+        as: 'sale',
+        attributes: ['raffle_id','payment_status']
+      }],
+      group: ['sale.payment_status','sale.raffle_id'],
+      raw: true
+    });
+
+    return entries ? +entries.entries_count : 0;
+  }
+
+  async getTotalEntriesForProgressiveRaffle(raffle_id) {
+    const raffles = await this.raffleRepository.model.findAll({
+      where: {
+        progressive_draw_id: raffle_id
+      }
+    });
+    
+    let count = 0;
+    for( let i = 0; i < raffles.length; i++ ) {
+      count += await this.getTotalEntriesForRaffle(raffles[i].id);
+    }
+
+    return count;
   }
 
   async addRaffle(newRaffle) {
@@ -203,7 +257,7 @@ export default class RaffleService {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
         const SaleExists = await this.saleRepository.findSaleByStripePaymentId(paymentIntent.id);
-        if(SaleExists.length > 0 && SaleExists.payment_status !== saleConstants.paymentStatus.success) {
+        if(SaleExists && SaleExists.length > 0 && SaleExists.payment_status !== saleConstants.paymentStatus.success) {
           await this.processPurchase(SaleExists[0].get({plain: true}));
         }
         break;
@@ -410,7 +464,7 @@ export default class RaffleService {
 
     if(player.is_email_allowed && progressiveRaffle) {
       const organization = await this.organizationRepository.findByPk(bundle.raffle.organization_id);
-      await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.raffle.raffle_name, bundle.raffle_id, progressiveRaffle.draw_datetime, organization.name);
+      await this.mailService.sendTicketPurchaseConfirmation(player.firstname, player.email, Entries, bundle.price, bundle.raffle.raffle_name, bundle.raffle_id, organization.name);
     }
 
     const beneficiary = await this.beneficiaryRepository.findByPk(Sale[0].beneficiary_id, {
@@ -667,7 +721,14 @@ export default class RaffleService {
 
   async resolveRaffles() {
     const pendingRaffles = await this.raffleRepository.findPendingRaffles();
-    const winners = await this.peerplaysRepository.getWinners();
+    if(!pendingRaffles || pendingRaffles.length === 0) {
+      return true;
+    }
+
+    //Find the lowest lottery id in the db so that we don't have to start looping from 1.11.0
+    const entries = await this.entryRepository.findAll();
+    const start = entries.reduce((min, currentValue) => { return min < +currentValue.peerplays_raffle_ticket_id.split('.')[2] ? min : +currentValue.peerplays_raffle_ticket_id.split('.')[2]});
+    const winners = await this.peerplaysRepository.getWinners(start);
 
     for(let i = 0; i < pendingRaffles.length; i++) {
       const winner = winners.find((winner) => winner.op[1].lottery === pendingRaffles[i].peerplays_draw_id);
@@ -758,10 +819,11 @@ export default class RaffleService {
         await this.distributeWinnerAmount(user.peerplays_account_id, user.peerplays_account_name, user.peerplays_master_password, amounts.total_jackpot, pendingRaffles[i].id);
 
         if(user.is_email_allowed) {
-          const progressiveRaffle = await this.raffleRepository.findByPk(pendingRaffles[i].draw_type === raffleConstants.drawType.progressive ? pendingRaffles[i].id : pendingRaffles[i].progressive_draw_id);
           const org = await this.organizationRepository.findByPk(pendingRaffles[i].organization_id);
-          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, amounts.total_jackpot, progressiveRaffle.draw_datetime, org.name);
+          await this.mailService.sendWinnerMail(user.firstname, user.email, pendingRaffles[i].raffle_name, amounts.total_jackpot, org.name);
         }
+
+        this.sendParticipantEmails(pendingRaffles[i], user);
 
         if(pendingRaffles[i].draw_type !== raffleConstants.drawType.progressive) {
           await this.distributeBeneficiaryAndAdminAmount(amounts, pendingRaffles[i].organization_id, pendingRaffles[i].id);
@@ -770,6 +832,34 @@ export default class RaffleService {
     }
 
     return true;
+  }
+
+  async sendParticipantEmails(raffle, winner) {
+    let sales = await this.saleRepository.model.findAll({
+      where: {
+        raffle_id: raffle.id,
+      },
+      include: [{
+        where: {
+          id: {
+            [Op.not]: winner.id
+          }
+        },
+        model: this.userRepository.model,
+        as: 'player',
+        attributes: ['email']
+      }]
+    });
+
+    sales = sales.map(sale => sale.player.email);
+    sales = [...new Set(sales)];
+
+    for (let i = 0; i < sales.length; i+=50) {
+      await this.mailService.sendParticipantEmail(sales.slice(i, i + 50), winner.firstname, raffle.raffle_name);
+
+      // sleep for 100 ms
+      await new Promise(resolve => setTimeout(resolve, 100.0));
+    }
   }
 
   async calculateProgressiveAmounts(raffle_id) {

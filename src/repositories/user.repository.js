@@ -53,7 +53,7 @@ class UserRepository extends BasePostgresRepository {
     });
 
     for(let i = 0; i < Sellers.length; i++){
-      if(await bcrypt.compare(password,Sellers[i].password)) {
+      if(Sellers[i].password && await bcrypt.compare(password,Sellers[i].password)) {
         return Sellers[i];
       }
     }
