@@ -806,11 +806,11 @@ export default class RaffleService {
           if(winning_entry.length > 0) {
             pendingRaffles[i].winning_entry_id = winning_entry[0].id;
           }else {
-            const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+            const winningTicketPosition = Math.floor(Math.random() * (userEntries.length));
             pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
           }
         }else {
-          const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+          const winningTicketPosition = Math.floor(Math.random() * (userEntries.length));
           pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
         }
 
@@ -926,7 +926,7 @@ export default class RaffleService {
       organization_id
     }});
 
-    const amount = +amounts.admin_fee_amount + +amounts.donation_amount + +amounts.organization_amount + +amounts.each_beneficiary_amount * +numBeneficiaries;
+    const amount = (Number(amounts.admin_fee_amount) + Number(amounts.donation_amount) + Number(amounts.organization_amount) + Number(amounts.each_beneficiary_amount) * Number(numBeneficiaries)).toFixed(2);
     if(amount <= 0) {
       return;
     }
