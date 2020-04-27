@@ -46,7 +46,7 @@ class PeerplaysRepository {
 
   async sendPPY(accountId, amount, senderAccountId, senderPKey, assetId) {
     let amt = (new BigNumber(amount)).multipliedBy(Math.pow(10,this.peerplaysConnection.asset.precision));
-    amt = Math.round(amount.toNumber());
+    amt = Math.round(amt.toNumber());
     const tr = new this.peerplaysConnection.TransactionBuilder();
     let result;
 
