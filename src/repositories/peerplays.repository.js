@@ -45,7 +45,7 @@ class PeerplaysRepository {
   }
 
   async sendPPY(accountId, amount, senderAccountId, senderPKey, assetId) {
-    amount = new BigNumber(amount).shiftedBy(this.peerplaysConnection.asset.precision).toNumber();
+    amount = Math.round(((new BigNumber(amount)) * Math.pow(10,this.peerplaysConnection.asset.precision)).toNumber());
     const tr = new this.peerplaysConnection.TransactionBuilder();
     let result;
 
@@ -125,7 +125,7 @@ class PeerplaysRepository {
   }
 
   async sendUSDFromReceiverAccount(accountId, amount) {
-    return this.sendPPY(accountId, Number(amount) + await this.getTransferFee(config.peerplays.sendAssetId), config.peerplays.paymentReceiver, this.receiverPKey, config.peerplays.sendAssetId);
+    return this.sendPPY(accountId, +Number(amount).toFixed(2) + await this.getTransferFee(config.peerplays.sendAssetId), config.peerplays.paymentReceiver, this.receiverPKey, config.peerplays.sendAssetId);
   }
 
   async sendUSDFromWinnerToPaymentAccount(playerId, playerPKey, amount) {
