@@ -45,7 +45,8 @@ class PeerplaysRepository {
   }
 
   async sendPPY(accountId, amount, senderAccountId, senderPKey, assetId) {
-    amount = Math.round(((new BigNumber(amount)) * Math.pow(10,this.peerplaysConnection.asset.precision)).toNumber());
+    let amt = (new BigNumber(amount)).multipliedBy(Math.pow(10,this.peerplaysConnection.asset.precision));
+    amt = Math.round(amt.toNumber());
     const tr = new this.peerplaysConnection.TransactionBuilder();
     let result;
 
@@ -57,9 +58,8 @@ class PeerplaysRepository {
         },
         from: senderAccountId,
         to: accountId,
-        amount: {amount, asset_id: assetId}
+        amount: {amount: amt, asset_id: assetId}
       });
-
 
       await tr.set_required_fees();
       tr.add_signer(senderPKey, senderPKey.toPublicKey().toPublicKeyString());
