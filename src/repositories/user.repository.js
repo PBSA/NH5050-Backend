@@ -66,6 +66,15 @@ class UserRepository extends BasePostgresRepository {
       where: {peerplays_account_id}
     });
   }
+
+  async findOrganizationAdmins(organization_id) {
+    return this.model.findAll({
+      where: {
+        organization_id,
+        user_type: profileConstants.userType.admin
+      }
+    });
+  }
 }
 
 module.exports = UserRepository;

@@ -45,7 +45,8 @@ class PeerplaysRepository {
   }
 
   async sendPPY(accountId, amount, senderAccountId, senderPKey, assetId) {
-    amount = new BigNumber(amount).shiftedBy(this.peerplaysConnection.asset.precision).toNumber();
+    let amt = (new BigNumber(amount)).multipliedBy(Math.pow(10,this.peerplaysConnection.asset.precision));
+    amt = Math.round(amt.toNumber());
     const tr = new this.peerplaysConnection.TransactionBuilder();
     let result;
 
@@ -57,9 +58,8 @@ class PeerplaysRepository {
         },
         from: senderAccountId,
         to: accountId,
-        amount: {amount, asset_id: assetId}
+        amount: {amount: amt, asset_id: assetId}
       });
-
 
       await tr.set_required_fees();
       tr.add_signer(senderPKey, senderPKey.toPublicKey().toPublicKeyString());
@@ -125,7 +125,7 @@ class PeerplaysRepository {
   }
 
   async sendUSDFromReceiverAccount(accountId, amount) {
-    return this.sendPPY(accountId, Number(amount) + await this.getTransferFee(config.peerplays.sendAssetId), config.peerplays.paymentReceiver, this.receiverPKey, config.peerplays.sendAssetId);
+    return this.sendPPY(accountId, +Number(amount).toFixed(2) + await this.getTransferFee(config.peerplays.sendAssetId), config.peerplays.paymentReceiver, this.receiverPKey, config.peerplays.sendAssetId);
   }
 
   async sendUSDFromWinnerToPaymentAccount(playerId, playerPKey, amount) {

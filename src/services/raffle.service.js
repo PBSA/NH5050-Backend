@@ -806,17 +806,15 @@ export default class RaffleService {
           if(winning_entry.length > 0) {
             pendingRaffles[i].winning_entry_id = winning_entry[0].id;
           }else {
-            const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+            const winningTicketPosition = Math.floor(Math.random() * (userEntries.length));
             pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
           }
         }else {
-          const winningTicketPosition = Math.floor(Math.random() * (userEntries.length - 1) + 1);
+          const winningTicketPosition = Math.floor(Math.random() * (userEntries.length));
           pendingRaffles[i].winning_entry_id = userEntries[winningTicketPosition].id;
         }
 
         await pendingRaffles[i].save();
-
-        await this.distributeWinnerAmount(user.peerplays_account_id, user.peerplays_account_name, user.peerplays_master_password, amounts.total_jackpot, pendingRaffles[i].id);
 
         if(user.is_email_allowed) {
           const org = await this.organizationRepository.findByPk(pendingRaffles[i].organization_id);
@@ -824,6 +822,10 @@ export default class RaffleService {
         }
 
         this.sendParticipantEmails(pendingRaffles[i], user);
+
+        await this.sendAdminReports(amounts.total_jackpot, pendingRaffles[i], `${user.firstname} ${user.lastname}`)
+
+        await this.distributeWinnerAmount(user.peerplays_account_id, user.peerplays_account_name, user.peerplays_master_password, amounts.total_jackpot, pendingRaffles[i].id);
 
         if(pendingRaffles[i].draw_type !== raffleConstants.drawType.progressive) {
           await this.distributeBeneficiaryAndAdminAmount(amounts, pendingRaffles[i].organization_id, pendingRaffles[i].id);
@@ -859,6 +861,15 @@ export default class RaffleService {
 
       // sleep for 100 ms
       await new Promise(resolve => setTimeout(resolve, 100.0));
+    }
+  }
+
+  async sendAdminReports(raffleAmount, raffle, winnerName) {
+    const admins = await this.userRepository.findOrganizationAdmins(raffle.organization_id);
+
+    const reportUrl = await this.createRaffleReport(raffle.id,{organization_id: raffle.organization_id});
+    for (let i = 0; i < admins.length; i++) {
+      await this.mailService.sendRaffleReportToAdmin(admins[i].firstname, admins[i].email, raffleAmount, raffle.raffle_name, winnerName, reportUrl);
     }
   }
 
@@ -915,12 +926,12 @@ export default class RaffleService {
       organization_id
     }});
 
-    const amount = +amounts.admin_fee_amount + +amounts.donation_amount + +amounts.organization_amount + +amounts.each_beneficiary_amount * +numBeneficiaries;
+    const amount = +(Number(amounts.admin_fee_amount) + Number(amounts.donation_amount) + Number(amounts.organization_amount) + Number(amounts.each_beneficiary_amount) * Number(numBeneficiaries)).toFixed(2);
     if(amount <= 0) {
       return;
     }
 
-    const result = await this.peerplaysRepository.sendUSDFromReceiverToPaymentAccount(amount);
+    const result = await this.peerplaysRepository.sendUSDFromReceiverToPaymentAccount(amount.toFixed(2));
     await this.transactionRepository.model.create({
       transfer_from: result.trx.operations[0][1].from,
       transfer_to: result.trx.operations[0][1].to,

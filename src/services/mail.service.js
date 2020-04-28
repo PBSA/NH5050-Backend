@@ -2,7 +2,7 @@ const fs = require('fs-extra');
 const Handlebars = require('handlebars');
 const config = require('config');
 
-let templates = ['welcome', 'winner', 'participant', 'ticket'];
+let templates = ['welcome', 'winner', 'participant', 'ticket', 'report'];
 
 templates = templates.map(name => {
   const template = fs.readFileSync(`${__dirname}/templates/${name}.handlebars`).toString('utf-8');
@@ -93,6 +93,21 @@ class MailService {
       to: email,
       from: config.mailer.sender,
       subject: `Your tickets for NH MCL ${raffleName}`,
+      html: resultHtml
+    };
+    
+    await this.smtpConnection.sendMail(options);
+  }
+
+  async sendRaffleReportToAdmin(adminName, email, raffleAmount, raffleName, winnerName, reportUrl) {
+    const terms = 'https://www.seacoastmarines.org/raffle-rules/terms-conditions/';
+
+    const resultHtml = renderTemplate('report', {adminName, winnerName, raffleAmount, raffleName, terms, reportUrl});
+
+    const options = {
+      to: email,
+      from: config.mailer.sender,
+      subject: `Report for NH MCL ${raffleName}`,
       html: resultHtml
     };
     
