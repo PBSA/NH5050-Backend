@@ -30,23 +30,23 @@ class MailService {
   }
 
   async sendMailAfterRegistration(firstname, email) {
-    const contact = 'mailto:raffles@seacoastmarines.org';
-    const contactEmail = 'raffles@seacoastmarines.org';
-    const terms = 'https://www.seacoastmarines.org/raffle-rules/terms-conditions/';
+    const contact = 'mailto:example@pbsa.info';
+    const contactEmail = 'example@pbsa.info';
+    const terms = 'https://example.com';
     const resultHtml = renderTemplate('welcome', {firstname, contact, contactEmail, terms});
 
     const options = {
       to: email,
       from: config.mailer.sender,
-      subject: 'Welcome to New Hampshire Marine Corps Lottery',
+      subject: 'Welcome to Diamond Gaming\'s Lottery',
       html: resultHtml
     };
     await this.smtpConnection.sendMail(options);
   }
 
   async sendWinnerMail(firstname, email, raffleName, amount, organizationName) {
-    const contact = 'mailto:raffles@seacoastmarines.org';
-    const terms = 'https://www.seacoastmarines.org/raffle-rules/terms-conditions/';
+    const contact = 'mailto:example@pbsa.info';
+    const terms = 'https://example.com';
     const frontendUrl = config.frontendUrl;
     const resultHtml = renderTemplate('winner', {firstname, amount, contact, raffleName, frontendUrl, terms, organizationName});
 
@@ -67,7 +67,7 @@ class MailService {
     const options = {
       bcc: emails.join(','),
       from: config.mailer.sender,
-      subject: 'Thank you for supporting the MCL NH Raffle',
+      subject: 'Thank you for supporting Raffle',
       html: resultHtml
     };
 
@@ -75,11 +75,11 @@ class MailService {
   }
 
   async sendTicketPurchaseConfirmation(firstname, email, entries, raffleAmount, raffleName, raffleId, organizationName) {
-    const contact = 'mailto:raffles@seacoastmarines.org';
-    const contactEmail = 'raffles@seacoastmarines.org';
-    const terms = 'https://www.seacoastmarines.org/raffle-rules/terms-conditions/';
-    const joinToday = 'https://www.seacoastmarines.org/mcl-nh/';
-    const rules = 'https://www.seacoastmarines.org/raffle-rules/';
+    const contact = 'mailto:example@pbsa.info';
+    const contactEmail = 'example@pbsa.info';
+    const terms = 'https://example.com';
+    const joinToday = 'https://example.com';
+    const rules = 'https://example.com';
     
     let entriesArr = entries.map((entry) => ({
       id: this.addLeadingZeros(entry.id, 5),
@@ -92,7 +92,7 @@ class MailService {
     const options = {
       to: email,
       from: config.mailer.sender,
-      subject: `Your tickets for NH MCL ${raffleName}`,
+      subject: `Your tickets for Diamond Gaming ${raffleName}`,
       html: resultHtml
     };
     
@@ -100,14 +100,14 @@ class MailService {
   }
 
   async sendRaffleReportToAdmin(adminName, email, raffleAmount, raffleName, winnerName, reportUrl) {
-    const terms = 'https://www.seacoastmarines.org/raffle-rules/terms-conditions/';
+    const terms = 'https://example.com';
 
     const resultHtml = renderTemplate('report', {adminName, winnerName, raffleAmount, raffleName, terms, reportUrl});
 
     const options = {
       to: email,
       from: config.mailer.sender,
-      subject: `Report for NH MCL ${raffleName}`,
+      subject: `Report for Diamond Gaming ${raffleName}`,
       html: resultHtml
     };
     
