@@ -30,7 +30,7 @@
     "pg-hstore": "^2.3.3",
     "randomstring": "^1.1.5",
     "request": "^2.88.2",
-    "sequelize": "^5.21.5",
+    "sequelize": "^6.6.5",
     "stripe": "^8.36.0",
     "swagger-jsdoc": "^3.5.0",
     "swagger-ui-express": "^4.1.3",
